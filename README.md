@@ -163,3 +163,8 @@ run_all.sh
   Anthropic's *A Mathematical Framework for Transformer Circuits* and
   *In-context Learning and Induction Heads*; nostalgebraist's original
   *logit lens* post; Karpathy's *nanoGPT* (for the training side).
+
+## License
+
+[MIT](LICENSE): use it, change it, teach with it. The models it downloads
+come with their own licenses (SmolLM2 and its GGUF files are Apache-2.0).
