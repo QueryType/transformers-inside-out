@@ -46,6 +46,8 @@ or `jupytext` to convert to `.ipynb`). Figures are saved to `outputs/`.
 
 ## The interactive explainer (`site/`)
 
+**Read it online: https://querytype.github.io/transformers-inside-out/** (no setup).
+
 `site/index.html` is the companion explainer: every lesson explained in plain
 language, with live widgets that use real data from the model. It includes a
 working in-browser tokenizer, a temperature/top-k/top-p sampling lab, a
@@ -60,6 +62,9 @@ python site/build_data.py            # data for lessons 01-10 (add MODEL_ID=... 
 python site/build_data_more.py       # lessons 11-13: runs those lesson scripts and exports their results
 open site/index.html                 # works offline, no server needed
 ```
+
+Maintainers: `bash site/publish_pages.sh` copies the built page to the
+`gh-pages` branch, which GitHub Pages serves. `main` stays source-only.
 
 ## Setup
 
@@ -147,6 +152,7 @@ site/
   index.html              the interactive explainer
   build_data.py           exports data for lessons 01-10
   build_data_more.py      exports data for lessons 11-13
+  publish_pages.sh        publishes the built site to GitHub Pages
 outputs/                  figures written by the lessons
 requirements.txt
 run_all.sh
