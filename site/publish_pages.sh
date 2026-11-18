@@ -23,7 +23,7 @@ else
   git -C "$TMP" checkout -q --orphan gh-pages
 fi
 
-git -C "$TMP" rm -rq --ignore-unmatch . >/dev/null
+git -C "$TMP" rm -rqf --ignore-unmatch . >/dev/null
 mkdir -p "$TMP/js" "$TMP/data"
 cp site/index.html "$TMP/"
 cp site/js/*.js "$TMP/js/"
