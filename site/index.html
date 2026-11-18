@@ -1,0 +1,1207 @@
+<title>Transformers, Inside Out</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Learn how transformer language models work by probing a real one: thirteen interactive lessons, real model data, very little math.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a lab notebook. Sticky lesson index on the left, a reading column for prose,
+   and wider "bench" panels where the live instruments (widgets) sit. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #eaeef2;
+  --ink: #141a22;
+  --muted: #566070;
+  --line: #d6dce4;
+  --accent: #0b7a68;        /* teal: model internals, heatmaps */
+  --accent-soft: #d5ede8;
+  --hot: #b4530a;           /* amber: our running example, " Paris" */
+  --hot-soft: #fbe7d3;
+  --bad: #b42335;
+  --code-bg: #eef1f5;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --read: 42rem;
+  --bench: 64rem;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1116; --surface: #161b22; --surface-2: #1d232c; --ink: #e6eaf0; --muted: #98a2b3;
+    --line: #2a313c; --accent: #3cc7ad; --accent-soft: #123a34; --hot: #f5a524; --hot-soft: #3d2a0c;
+    --bad: #f0687a; --code-bg: #1a2029; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1116; --surface: #161b22; --surface-2: #1d232c; --ink: #e6eaf0; --muted: #98a2b3;
+  --line: #2a313c; --accent: #3cc7ad; --accent-soft: #123a34; --hot: #f5a524; --hot-soft: #3d2a0c;
+  --bad: #f0687a; --code-bg: #1a2029; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 1.0625rem/1.65 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+a { color: var(--accent); text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.12; margin: 0; letter-spacing: -0.01em; }
+p { margin: 0; }
+code, kbd { font-family: var(--font-mono); font-size: 0.88em; }
+:not(pre) > code { background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 4px; }
+
+/* ---------- shell ---------- */
+.shell { display: grid; grid-template-columns: 15.5rem minmax(0, 1fr); min-height: 100%; }
+.toc {
+  position: sticky; top: env(safe-area-inset-top, 0px); height: 100vh; overflow-y: auto;
+  border-right: 1px solid var(--line); padding: 1.5rem 1rem 2rem max(1rem, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: 1.25rem;
+}
+.toc-brand { font: 800 1.15rem/1.1 var(--font-display); color: var(--ink); text-decoration: none; }
+.toc-brand span { display: block; font: 500 0.75rem/1.4 var(--font-mono); color: var(--muted); margin-top: 0.35rem; letter-spacing: 0.02em; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.toc a.step {
+  display: grid; grid-template-columns: 2rem 1fr; align-items: baseline; gap: 0.25rem;
+  padding: 0.4rem 0.5rem; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.9rem; line-height: 1.3;
+}
+.toc a.step b { font: 600 0.78rem var(--font-mono); color: var(--muted); }
+.toc a.step:hover { background: var(--surface-2); color: var(--ink); }
+.toc a.step.on { background: var(--accent-soft); color: var(--ink); }
+.toc a.step.on b { color: var(--accent); }
+.toc-foot { margin-top: auto; font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.theme-btn { font: 500 0.8rem var(--font-mono); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 0.35rem 0.6rem; cursor: pointer; }
+
+main { min-width: 0; padding-block: 0 6rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.col { max-width: var(--read); margin-inline: auto; }
+.bench { max-width: var(--bench); margin-inline: auto; }
+
+/* ---------- hero ---------- */
+.hero { padding-block: 4rem 2.5rem; display: grid; gap: 1.5rem; }
+.eyebrow { font: 500 0.78rem/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.hero h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 800; letter-spacing: -0.03em; }
+.lead { font-size: 1.2rem; line-height: 1.6; color: var(--ink); max-width: 40rem; }
+.prose { display: grid; gap: 1.05rem; }
+.prose p, .prose li { max-width: 65ch; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.25rem; display: grid; gap: 0.4rem; }
+.muted { color: var(--muted); }
+
+.specimen {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.5rem; display: grid; gap: 1rem;
+}
+.specimen-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.arrow { font: 500 1.2rem var(--font-mono); color: var(--muted); padding-inline: 0.25rem; }
+.answer-chip { font: 600 1.05rem var(--font-mono); background: var(--hot-soft); color: var(--hot); border: 1.5px solid var(--hot); border-radius: 6px; padding: 0.25rem 0.6rem; }
+.answer-chip small { font-weight: 500; font-size: 0.75rem; margin-left: 0.4rem; }
+
+/* journey map: a line with ten stops */
+.journey { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; position: relative; }
+.journey li { position: relative; padding: 1.6rem 0.75rem 0 0; }
+.journey li::before { content: ""; position: absolute; top: 0.55rem; left: 0; right: 0; height: 2px; background: var(--line); }
+.journey li::after { content: ""; position: absolute; top: 0.2rem; left: 0; width: 0.8rem; height: 0.8rem; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+.journey a { text-decoration: none; color: inherit; display: grid; gap: 0.15rem; }
+.journey b { font: 600 0.75rem var(--font-mono); color: var(--accent); }
+.journey span { font-size: 0.86rem; line-height: 1.35; color: var(--muted); }
+.journey a:hover span { color: var(--ink); }
+.journey li:nth-child(n+6) { margin-top: 1.25rem; }
+
+/* ---------- tokens ---------- */
+.tok {
+  display: inline-flex; align-items: baseline; font: 500 0.92rem/1.2 var(--font-mono);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0.22rem 0.42rem; white-space: pre; color: var(--ink);
+}
+.tok .sp { color: var(--muted); opacity: 0.7; }
+.tok .nl { color: var(--muted); }
+.tok.hot { background: var(--hot-soft); border-color: var(--hot); color: var(--hot); }
+.tok.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tok sub { font-size: 0.65rem; color: var(--muted); margin-left: 0.3rem; font-weight: 400; }
+.tokrow { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+
+/* ---------- lessons ---------- */
+.lesson { padding-block: 4.5rem 1rem; border-top: 1px solid var(--line); display: grid; gap: 2rem; scroll-margin-top: 1rem; }
+.lesson-head { display: grid; gap: 0.75rem; }
+.lesson-num { font: 600 0.8rem var(--font-mono); color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+.lesson h2 { font-size: clamp(1.9rem, 4vw, 2.7rem); font-weight: 700; }
+.lesson h3 { font-size: 1.3rem; font-weight: 700; margin-top: 0.75rem; }
+.question { font-size: 1.15rem; color: var(--muted); }
+
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.25rem; display: grid; gap: 1rem; min-width: 0;
+}
+.panel-title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.panel-title h4 { margin: 0; font: 700 1rem var(--font-display); }
+.panel-title .hint { font: 400 0.82rem var(--font-mono); color: var(--muted); }
+.caption { font-size: 0.9rem; color: var(--muted); line-height: 1.55; max-width: 70ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1.2rem; align-items: center; }
+.controls label { display: inline-flex; align-items: center; gap: 0.5rem; font: 500 0.85rem var(--font-mono); color: var(--muted); }
+.controls output { font: 600 0.85rem var(--font-mono); color: var(--ink); min-width: 3.2rem; display: inline-block; }
+input[type=range] { accent-color: var(--accent); width: 9rem; }
+select, textarea, .btn {
+  font: 500 0.88rem var(--font-mono); background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px; padding: 0.4rem 0.6rem;
+}
+select { max-width: 100%; }
+textarea { width: 100%; min-height: 4.5rem; resize: vertical; line-height: 1.5; }
+.btn { cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.btn.on { background: var(--accent-soft); border-color: var(--accent); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.scroll-x { overflow-x: auto; }
+svg { display: block; max-width: 100%; height: auto; }
+svg text { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+svg .ink { fill: var(--ink); }
+svg .axis { stroke: var(--line); }
+
+/* thread: what happened to our sentence */
+.thread {
+  border: 1.5px solid var(--hot); background: var(--hot-soft); border-radius: var(--radius);
+  padding: 1rem 1.25rem; display: grid; gap: 0.5rem;
+}
+.thread .label { font: 600 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--hot); }
+.thread p { color: var(--ink); max-width: 65ch; }
+
+.keys { display: grid; gap: 0.5rem; padding: 1rem 1.25rem; background: var(--surface-2); border-radius: var(--radius); }
+.keys .label { font: 600 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.keys ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.3rem; }
+.next { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; font-size: 1rem; }
+.next a { font-weight: 600; }
+
+pre.code {
+  margin: 0; background: var(--code-bg); border-radius: 8px; padding: 1rem; overflow-x: auto;
+  font: 400 0.84rem/1.55 var(--font-mono); color: var(--ink);
+}
+pre.code .c { color: var(--muted); }
+pre.code .k { color: var(--accent); font-weight: 600; }
+pre.code .hl { background: var(--hot-soft); display: inline-block; width: 100%; }
+.file { font: 500 0.78rem var(--font-mono); color: var(--muted); }
+
+.formula { font: 500 1rem var(--font-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; overflow-x: auto; white-space: pre; }
+
+/* bars */
+.bars { display: grid; gap: 4px; }
+.bar { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr) 4.2rem; align-items: center; gap: 0.6rem; font: 500 0.85rem var(--font-mono); }
+.bar .lab { white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.bar .track { height: 1.1rem; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.25s ease; }
+.bar .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.bar.hot .fill { background: var(--hot); }
+.bar.hot .lab { color: var(--hot); font-weight: 600; }
+.bar.cut .fill { background: var(--line); }
+.bar.cut .lab { color: var(--muted); text-decoration: line-through; }
+
+.stat { display: grid; gap: 0.15rem; }
+.stat b { font: 700 1.6rem var(--font-display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.82rem; color: var(--muted); }
+.stats { display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; }
+
+.out-box { font: 400 0.95rem/1.6 var(--font-mono); background: var(--surface-2); border-radius: 8px; padding: 0.9rem 1rem; white-space: pre-wrap; word-break: break-word; }
+.out-box .gen { color: var(--accent); }
+.out-box .gen.hot { color: var(--hot); }
+
+.tip { position: fixed; pointer-events: none; z-index: 50; background: var(--ink); color: var(--bg); font: 500 0.8rem/1.4 var(--font-mono); padding: 0.4rem 0.6rem; border-radius: 6px; max-width: 18rem; white-space: pre-wrap; }
+
+table.data { border-collapse: collapse; font: 400 0.88rem var(--font-mono); width: 100%; }
+table.data th, table.data td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); text-align: left; font-variant-numeric: tabular-nums; }
+table.data th { color: var(--muted); font-weight: 500; }
+
+/* architecture diagram */
+.arch-box { cursor: pointer; }
+.arch-box rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; transition: fill 0.15s; }
+.arch-box:hover rect, .arch-box.on rect { fill: var(--accent-soft); stroke: var(--accent); }
+.arch-box text { fill: var(--ink); font-family: var(--font-body); font-size: 13px; }
+.arch-box text.sub { fill: var(--muted); font-family: var(--font-mono); font-size: 10.5px; }
+.stream { stroke: var(--hot); stroke-width: 4; fill: none; }
+.flow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+
+footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top: 4rem; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1080px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .toc {
+    position: sticky; top: env(safe-area-inset-top, 0px); height: auto; z-index: 20; flex-direction: row; align-items: center;
+    background: var(--bg); border-right: 0; border-bottom: 1px solid var(--line);
+    padding: 0.5rem max(16px, env(safe-area-inset-right, 0px)) 0.5rem max(16px, env(safe-area-inset-left, 0px)); overflow-x: auto; gap: 0.75rem;
+  }
+  .toc-brand span, .toc-foot { display: none; }
+  .toc-brand { white-space: nowrap; font-size: 1rem; }
+  .toc ol { display: flex; gap: 2px; }
+  .toc a.step { grid-template-columns: auto; padding: 0.3rem 0.55rem; }
+  .toc a.step span { display: none; }
+  .lesson { scroll-margin-top: 3.5rem; }
+}
+@media (max-width: 760px) {
+  .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .journey { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .journey li:nth-child(n+3) { margin-top: 1rem; }
+  .bar { grid-template-columns: 6.5rem minmax(0, 1fr) 3.6rem; }
+  .hero { padding-block: 2.5rem 1.5rem; }
+  body { font-size: 1rem; }
+}
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="Lessons">
+  <a class="toc-brand" href="#top">Transformers, Inside Out<span>SmolLM2-135M · 13 lessons</span></a>
+  <ol id="toc-list">
+    <li><a class="step" href="#l01"><b>01</b><span>Use it as a black box</span></a></li>
+    <li><a class="step" href="#l02"><b>02</b><span>What comes out</span></a></li>
+    <li><a class="step" href="#l03"><b>03</b><span>Writing a paragraph</span></a></li>
+    <li><a class="step" href="#l04"><b>04</b><span>What goes in</span></a></li>
+    <li><a class="step" href="#l05"><b>05</b><span>What's inside</span></a></li>
+    <li><a class="step" href="#l06"><b>06</b><span>Watching it think</span></a></li>
+    <li><a class="step" href="#l07"><b>07</b><span>Attention</span></a></li>
+    <li><a class="step" href="#l08"><b>08</b><span>The KV cache</span></a></li>
+    <li><a class="step" href="#l09"><b>09</b><span>Breaking it</span></a></li>
+    <li><a class="step" href="#l10"><b>10</b><span>Rebuilding it</span></a></li>
+    <li><a class="step" href="#l11"><b>11</b><span>Quantization</span></a></li>
+    <li><a class="step" href="#l12"><b>12</b><span>Inside a GGUF</span></a></li>
+    <li><a class="step" href="#l13"><b>13</b><span>LoRA</span></a></li>
+  </ol>
+  <div class="toc-foot">
+    <p>Every number on this page was measured on the real model by <code>site/build_data.py</code> and <code>site/build_data_more.py</code>.</p>
+    <p style="margin-top:.75rem"><button class="theme-btn" id="theme-btn" type="button">Theme: system</button></p>
+  </div>
+</nav>
+
+<main id="top">
+<!-- ===================================================== HERO -->
+<header class="hero bench">
+  <div class="col prose" style="margin:0">
+    <p class="eyebrow">A hands-on course · 13 lessons · runs on a laptop</p>
+    <h1>Transformers, Inside Out</h1>
+    <p class="lead">Most tutorials build a transformer from the bottom up. You meet tokenizers, embeddings and attention formulas long before you see the model <em>do</em> anything. This course goes the other way. We take a real language model, ask it one question, and then open it up one layer at a time until we can rebuild it from scratch. Part 2 then makes it practical: we shrink it, open the file format local apps run, and teach it something new.</p>
+  </div>
+
+  <div class="specimen">
+    <p class="eyebrow" style="color:var(--hot)">The running example</p>
+    <div class="specimen-row" id="hero-tokens"></div>
+    <p class="caption">This is the sentence we follow through every lesson. The model is SmolLM2-135M, a small open model with the same design as Llama. It reads these ten tokens and gives <b style="color:var(--hot)">' Paris'</b> an 88% chance of coming next. By the end you will know where each part of that answer comes from.</p>
+    <ol class="journey" id="journey">
+      <li><a href="#l01"><b>01</b><span>It answers "Paris"</span></a></li>
+      <li><a href="#l02"><b>02</b><span>…with 88% out of 49,152 options</span></a></li>
+      <li><a href="#l03"><b>03</b><span>One token at a time, in a loop</span></a></li>
+      <li><a href="#l04"><b>04</b><span>"Eiffel" arrives as two pieces</span></a></li>
+      <li><a href="#l05"><b>05</b><span>30 layers add to one vector</span></a></li>
+      <li><a href="#l06"><b>06</b><span>Paris appears at layer 23</span></a></li>
+      <li><a href="#l07"><b>07</b><span>A head at layer 23 looks back at "iffel"</span></a></li>
+      <li><a href="#l08"><b>08</b><span>The past is computed once</span></a></li>
+      <li><a href="#l09"><b>09</b><span>Delete layer 23: Paris falls to 3%</span></a></li>
+      <li><a href="#l10"><b>10</b><span>60 lines of our own code say Paris too</span></a></li>
+      <li><a href="#l11"><b>11</b><span>In 4 bits it still says Paris</span></a></li>
+      <li><a href="#l12"><b>12</b><span>One file holds weights and words</span></a></li>
+      <li><a href="#l13"><b>13</b><span>2% new weights move it to Rome</span></a></li>
+    </ol>
+  </div>
+
+  <div class="grid2">
+    <div class="prose">
+      <h3 style="margin:0">How to use this page</h3>
+      <p>Each lesson starts with a question, explains the idea in plain words, and then gives you an instrument to play with. Every lesson has a matching script in <code>lessons/</code> that produces the same numbers on your own machine.</p>
+      <p>Try to predict what will happen before you move a slider. Being wrong is where the learning happens.</p>
+    </div>
+    <div class="prose">
+      <h3 style="margin:0">How much math?</h3>
+      <p>Five formulas in total, each introduced only when you need it: softmax, temperature, loss, attention, and three one-line helpers in the last lesson. If you can read <code>a / b</code> and know what an average is, you have enough.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ===================================================== 01 -->
+<section class="lesson" id="l01">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 01 · lessons/01_black_box.py</p>
+    <h2>Use it as a black box first</h2>
+    <p class="question">Before we open anything: what does this thing actually do?</p>
+  </div>
+  <div class="col prose">
+    <p>You give it text, and it continues the text. That is the whole interface. There is no question-answering module, no database of facts, no grammar engine. Everything you see below comes from one trick, repeated: <em>guess the next piece of text</em>.</p>
+    <p>The model we use is a <strong>base model</strong>. It has read a huge amount of web text, code and books, but nobody has taught it to chat. It does not "answer" you; it writes whatever would most plausibly come next in a document. That is why the prompts below look like the start of a sentence instead of a question.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Five prompts, greedy decoding</h4><span class="hint">always picks the single most likely next token</span></div>
+    <div id="w01-greedy" class="grid2"></div>
+    <p class="caption">Prompt in normal text, the model's continuation in colour. Run it again and you get exactly the same output, because greedy decoding involves no randomness.</p>
+  </div>
+  <div class="col prose">
+    <p>Look at what it is good and bad at. Code and counting are almost perfect, because they follow strict patterns. Stories are fluent. Facts are hit and miss. Our running example comes out right, but <em>"The capital of France is"</em> falls into a loop: "the capital of the country. The capital of France is the capital of…". A 135-million-parameter model is small (the models behind chat assistants are hundreds or thousands of times larger), and its weak spots are easy to find. That makes it a good specimen: you can see the gears.</p>
+    <p>Greedy decoding loops because once a phrase becomes likely, repeating it makes it even more likely. The cure is to let chance in:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Same prompt, three runs with sampling</h4><span class="hint">temperature 0.8, top-k 50</span></div>
+    <div id="w01-sampled" class="grid3"></div>
+    <p class="caption">With sampling, the model rolls a weighted die for each token. Two of the three runs start with " named", the most likely next token, and one of them even lands on "Robby" again. The other run picked a less likely first token, and the story went somewhere else entirely. One early roll of the die changes everything after it.</p>
+  </div>
+  <div class="col thread">
+    <p class="label">Our sentence</p>
+    <p>"The Eiffel Tower is located in the city of" → <b>" Paris, France. It is the tallest building in the world."</b> The first word is right, and then the model confidently invents a fact. Remember this: the model's job is to produce <em>plausible</em> text, and true text is only usually the most plausible.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>A language model continues text. Chat behaviour is extra training layered on top.</li>
+      <li>Greedy decoding is repeatable but loops. Sampling is lively but less reliable.</li>
+      <li>Small models are great for learning because their failures are easy to see.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l02">what exactly comes out of one call to the model? →</a></p>
+</section>
+
+<!-- ===================================================== 02 -->
+<section class="lesson" id="l02">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 02 · lessons/02_next_token.py</p>
+    <h2>What comes out: a probability for every token</h2>
+    <p class="question">If the model doesn't output a paragraph, what does it output?</p>
+  </div>
+  <div class="col prose">
+    <p>The single most important fact about these models:</p>
+    <p class="formula" style="white-space:normal">A language model is a function. Text goes in. A score for every possible next token comes out.</p>
+    <p>The model has a fixed vocabulary of <strong>49,152 tokens</strong> (words and pieces of words, see lesson 04). One call gives back 49,152 numbers called <strong>logits</strong>, one per token. A higher logit means "more likely to come next".</p>
+    <p>Logits are raw scores and can be any size. To turn them into probabilities that add up to 1 we use <strong>softmax</strong>, which is the first of our five formulas:</p>
+    <p class="formula">p(token) = exp(logit) / sum of exp(all logits)</p>
+    <p>The <code>exp</code> makes everything positive and stretches the gaps: a logit that is 4 points higher becomes about 55 times more likely. For our sentence, ' Paris' scores 10.6 and the runner-up ' T' scores 6.5. A 4-point lead turns into 88% against 1.5%.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>The output of one forward pass</h4><span class="hint">real logits, softmax computed in your browser</span></div>
+    <div class="controls">
+      <label for="w02-prompt">prompt</label>
+      <select id="w02-prompt"></select>
+      <label for="w02-temp">temperature <input type="range" id="w02-temp" min="0" max="59" value="19"> <output id="w02-temp-out">1.00</output></label>
+    </div>
+    <div id="w02-bars" class="bars"></div>
+    <div id="w02-rest"></div>
+    <p class="caption">The top 15 of 49,152 tokens. The grey line under the bars shows how much probability is spread over the remaining 49,137 tokens. A leading space is drawn as <span class="tok" style="padding:0 .25rem"><span class="sp">·</span></span> because it is part of the token: ' Paris' and 'Paris' are different tokens.</p>
+  </div>
+  <div class="col prose">
+    <h3>Temperature: dividing before softmax</h3>
+    <p>Move the temperature slider above. Temperature is the second formula, and it's just a division:</p>
+    <p class="formula">p = softmax(logits / T)</p>
+    <p>Dividing by a small T (below 1) makes the gaps between logits bigger, so the winner takes almost everything. Dividing by a large T shrinks the gaps, so the distribution flattens and unlikely tokens get a real chance. At T close to 0 you get greedy decoding. Notice how differently the prompts behave: <em>"Monday, Tuesday, Wednesday,"</em> stays confident until the temperature gets very high, while <em>"My favourite food is"</em> is spread thin even at T = 1, because there are many good answers.</p>
+
+    <h3>It predicts at every position at once</h3>
+    <p>Here's something tutorials rarely show. The model doesn't only produce a guess for the end of the text. It produces a guess <strong>after every token</strong>, all in the same pass. Generation only uses the last one, but the others show you what the model expected along the way:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>The model's guess after each token of our sentence</h4><span class="hint">hover or tap a token</span></div>
+    <div id="w02-positions" class="tokrow"></div>
+    <div id="w02-pos-detail" class="caption"></div>
+  </div>
+  <div class="col prose">
+    <p>After <span class="tok"><span class="sp">·</span>E</span> it has no idea (it guesses "-"). After <span class="tok">iffel</span> it predicts <span class="tok"><span class="sp">·</span>Tower</span> at 87%. After <span class="tok"><span class="sp">·</span>in</span> it already bets on <span class="tok"><span class="sp">·</span>Paris</span> at 57%, before it has even seen "the city of".</p>
+    <p>This is also why training is efficient: one pass over a 1,000-token document gives 1,000 predictions to check, not one.</p>
+
+    <h3>Loss: how surprised was the model?</h3>
+    <p>When you train a model you need one number that says how wrong it was. That number is the <strong>loss</strong>, and it is formula three:</p>
+    <p class="formula">loss = −log( probability the model gave to the real next token )</p>
+    <p>If the model gave the real token 100%, the loss is 0. At 50% the loss is 0.69, at 1% it is 4.6, and it keeps growing the more surprised the model is. Training is nothing more than nudging the weights so this number goes down, averaged over trillions of tokens. We never train in this course, but loss is a superb <em>measuring stick</em>, and we'll use it to test the model in lessons 07 and 09.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Per-token surprise: Paris vs. Berlin</h4><span class="hint">loss of each token given everything before it</span></div>
+    <div class="seg" id="w02-surprise-pick"></div>
+    <div id="w02-surprise"></div>
+    <p class="caption">The two sentences share the same first ten tokens, so their losses match until the city. ' Paris' costs 0.13 (88% expected) and ' Berlin' costs 7.96 (0.03% expected). Look at ' E' too: at the start of a sentence, almost nothing predicts "E", so it costs 7.9. Then 'iffel' costs 3.2 and ' Tower' only 0.14, because once you have "Eiffel", "Tower" is obvious.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>One forward pass gives one logit per vocabulary token, at every position.</li>
+      <li>Softmax turns logits into probabilities; temperature divides the logits first.</li>
+      <li>Loss is −log(p of the real token). Low loss means the model saw it coming.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l03">if it only predicts one token, how does it write a paragraph? →</a></p>
+</section>
+
+<!-- ===================================================== 03 -->
+<section class="lesson" id="l03">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 03 · lessons/03_generate_loop.py</p>
+    <h2>Writing a paragraph is a for-loop</h2>
+    <p class="question">How does one-token-at-a-time turn into a story?</p>
+  </div>
+  <div class="col prose">
+    <p><code>model.generate()</code> looks like magic, but it's a loop that you can write in ten lines:</p>
+  </div>
+  <div class="col">
+    <p class="file">lessons/03_generate_loop.py</p>
+    <pre class="code"><span class="k">def</span> my_generate_greedy(prompt, n_new=20):
+    ids = encode(tok, prompt, device)
+    <span class="k">for</span> _ <span class="k">in</span> range(n_new):
+        logits = model(ids).logits          <span class="c"># lesson 02: scores for every token</span>
+        next_id = logits[0, -1].argmax()    <span class="c"># take the best one at the LAST position</span>
+        ids = torch.cat([ids, next_id.view(1, 1)], dim=1)   <span class="c"># append it</span>
+    <span class="k">return</span> ids                              <span class="c"># ...and go round again</span></pre>
+  </div>
+  <div class="col prose">
+    <p>That's it. Run it next to the library's <code>model.generate(do_sample=False)</code> and you get <strong>identical token IDs</strong>. The model has no memory between steps and no plan for the paragraph. Each step it re-reads everything written so far, including its own previous outputs, and scores the next token. Step through it:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Step through generation</h4><span class="hint">greedy: the top bar always wins</span></div>
+    <div class="controls">
+      <button class="btn" id="w03-back" type="button">◀ back</button>
+      <button class="btn primary" id="w03-step" type="button">next token ▶</button>
+      <button class="btn" id="w03-play" type="button">play</button>
+      <button class="btn" id="w03-reset" type="button">reset</button>
+      <span class="muted" style="font:500 .85rem var(--font-mono)" id="w03-count"></span>
+    </div>
+    <div id="w03-text" class="out-box"></div>
+    <div class="grid2">
+      <div><p class="caption" style="margin-bottom:.5rem">The 10 best candidates for the next token</p><div id="w03-bars" class="bars"></div></div>
+      <div class="stat" id="w03-n90"></div>
+    </div>
+  </div>
+  <div class="col prose">
+    <p>Watch the right-hand number as you step. After "a little robot", 6 tokens cover 90% of the probability, because <span class="tok"><span class="sp">·</span>named</span> is a strong pattern. Right after "named", it takes <strong>865</strong> tokens to cover 90%: any name would do. Now watch the name "Robby" come back in step 11. The first time, "by" after "Rob" was one option among 87. The second time, <strong>a single token</strong> covers 90%: the model copies the name it already wrote. Lesson 07 finds the heads that do this copying. The model's uncertainty rises and falls with every word, and that's exactly where sampling settings matter.</p>
+    <h3>Sampling: three knobs that edit the probabilities</h3>
+    <p>Greedy decoding always takes the top bar. Sampling rolls a weighted die instead. Real systems first <em>edit</em> the probability list with three knobs:</p>
+    <ul>
+      <li><strong>temperature</strong>: divide the logits by T (lesson 02).</li>
+      <li><strong>top-k</strong>: keep only the k best tokens and throw the rest away.</li>
+      <li><strong>top-p</strong> (also called nucleus sampling): keep the smallest set of best tokens whose probabilities add up to p. When the model is confident that might be 2 tokens; when it is unsure it might be 800.</li>
+    </ul>
+    <p>The surviving probabilities are rescaled to add up to 1 and the die is rolled. Try it:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Sampling lab</h4><span class="hint">struck-through tokens can no longer be picked</span></div>
+    <div class="controls">
+      <label for="w03s-prompt">prompt</label><select id="w03s-prompt"></select>
+    </div>
+    <div class="controls">
+      <label for="w03s-t">temperature <input type="range" id="w03s-t" min="0" max="59" value="19"><output id="w03s-t-out"></output></label>
+      <label for="w03s-k">top-k <input type="range" id="w03s-k" min="1" max="50" value="50"><output id="w03s-k-out"></output></label>
+      <label for="w03s-p">top-p <input type="range" id="w03s-p" min="5" max="100" value="100"><output id="w03s-p-out"></output></label>
+    </div>
+    <div id="w03s-bars" class="bars"></div>
+    <div class="controls">
+      <button class="btn primary" id="w03s-roll" type="button">roll 1</button>
+      <button class="btn" id="w03s-roll100" type="button">roll 100</button>
+      <button class="btn" id="w03s-clear" type="button">clear</button>
+    </div>
+    <div id="w03s-rolls" class="tokrow"></div>
+    <p class="caption">Probabilities here are exact over the full vocabulary for temperature, and use the top 50 tokens for the rolls. Set top-k to 1 and you have greedy decoding again. Set temperature to 3 with top-p at 100% and watch the junk tokens start winning; that is the "word salad" you saw at T = 1.8 in the lesson script.</p>
+  </div>
+  <div class="col thread">
+    <p class="label">Our sentence</p>
+    <p>For our prompt the model is so sure (' Paris' 88%) that temperature 0.7 with top-p 0.9 leaves only ' Paris' in the running. The knobs only make a difference where the model is unsure, which for our sentence happens <em>after</em> "Paris", when it has to decide what to say next.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>Generation = predict, pick, append, repeat. The model writes nothing by itself; your loop does.</li>
+      <li>Temperature, top-k and top-p are edits to one probability list before a die roll.</li>
+      <li>The model's uncertainty changes at every step. "Tokens needed for 90%" makes that visible.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l04">we keep saying "token". What goes in, exactly? →</a></p>
+</section>
+
+<!-- ===================================================== 04 -->
+<section class="lesson" id="l04">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 04 · lessons/04_tokenizer.py</p>
+    <h2>What goes in: tokens, then vectors</h2>
+    <p class="question">The model takes integers. Where do they come from, and what does it do with them?</p>
+  </div>
+  <div class="col prose">
+    <p>Text goes through two steps before the neural network sees anything:</p>
+    <p class="formula">"Hello world"  →  tokenizer  →  [19556, 905]  →  embedding table  →  2 vectors of 576 numbers</p>
+    <p>The <strong>tokenizer</strong> is not part of the neural network. It's a fixed rulebook, built once from text statistics with an algorithm called <strong>byte-pair encoding</strong> (BPE). BPE starts from single bytes and repeatedly glues together the most frequent neighbouring pair, 48,900 times. Frequent words end up as one token, rare words are spelled out from pieces, and any text at all can be written as bytes, so nothing is ever "unknown".</p>
+    <p>The playground below runs <strong>the real tokenizer</strong> in your browser, with the same vocabulary and the same 48,900 merge rules as the Python library. It has been checked to give identical IDs. Type anything.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Tokenizer playground</h4><span class="hint">live, in your browser</span></div>
+    <div class="seg" id="w04-presets"></div>
+    <label for="w04-input" class="caption" style="margin:0">Your text</label>
+    <textarea id="w04-input" spellcheck="false"></textarea>
+    <div class="controls">
+      <label for="w04-ids"><input type="checkbox" id="w04-ids"> show token IDs</label>
+      <label for="w04-raw"><input type="checkbox" id="w04-raw"> show raw byte-level form</label>
+    </div>
+    <div id="w04-tokens" class="tokrow"></div>
+    <div id="w04-stats" class="stats"></div>
+  </div>
+  <div class="col prose">
+    <p>Things to try, and what you'll find:</p>
+    <ul>
+      <li><strong>Spaces belong to the next word.</strong> "Hello world" is <span class="tok">Hello</span> <span class="tok"><span class="sp">·</span>world</span>. So ' Paris' and 'Paris' are different tokens with different IDs.</li>
+      <li><strong>Case matters.</strong> "Hello" and "hello" are unrelated IDs. The model has to <em>learn</em> that they mean the same thing.</li>
+      <li><strong>Digits are always split one by one</strong> in this tokenizer, so "1234567" is seven tokens. That's a deliberate choice that helps with arithmetic.</li>
+      <li><strong>Languages are not treated equally.</strong> The English sentence is 6 tokens; the same sentence in Hindi is 28. Scripts the tokenizer saw rarely get spelled out byte by byte. That means higher cost, a shorter effective context, and usually worse quality. Switch on "raw byte-level form" to see the bytes.</li>
+    </ul>
+  </div>
+  <div class="col thread">
+    <p class="label">Our sentence</p>
+    <p>Ten tokens: <span id="w04-run" class="tokrow" style="display:inline-flex"></span>. "Eiffel" is not in the vocabulary, so it arrives as <span class="tok"><span class="sp">·</span>E</span> + <span class="tok">iffel</span>. The model never sees the word "Eiffel". It sees two fragments and has to work out from context that together they mean the famous tower. Lesson 07 shows the head that does this.</p>
+  </div>
+  <div class="col prose">
+    <h3>From ID to vector: the embedding table</h3>
+    <p>Now the network starts. Its first layer is a table with one row per token: 49,152 rows of 576 numbers each. Looking up token 7042 means "take row 7042". There's no calculation, just a lookup. Here are the first 24 of the 576 numbers for <span class="tok"><span class="sp">·</span>Paris</span>:</p>
+  </div>
+  <div class="bench panel">
+    <div id="w04-vec"></div>
+    <p class="caption">Each cell is one number (teal positive, amber negative). On its own a number means nothing; meaning lives in the pattern across all 576.</p>
+  </div>
+  <div class="col prose">
+    <p>Nobody chose these numbers. They started random and were adjusted during training. Because tokens used in similar ways get adjusted in similar ways, <strong>similar tokens end up with similar rows</strong>. We can measure "similar" with <em>cosine similarity</em>, which looks only at the direction a vector points in (1 = same direction, 0 = unrelated).</p>
+  </div>
+  <div class="bench grid2">
+    <div class="panel">
+      <div class="panel-title"><h4>Nearest neighbours</h4><span class="hint">click a word</span></div>
+      <div id="w04-words" class="seg"></div>
+      <div id="w04-neigh" class="bars"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><h4>The embedding space, flattened</h4><span class="hint">576 dims → 2 with PCA</span></div>
+      <div id="w04-scatter"></div>
+      <div id="w04-legend" class="seg" style="font:500 .78rem var(--font-mono)"></div>
+    </div>
+  </div>
+  <div class="col prose">
+    <p>The map on the right squashes 576 dimensions down to 2, so it loses a lot, but the groups are still there: days with days, numbers with numbers, cities near countries. <span class="tok"><span class="sp">·</span>king</span>'s closest neighbours include ' queen', ' emperor' and ' prince'. <span class="tok"><span class="sp">·</span>Paris</span> sits next to ' London', ' Berlin' and ' France'. The model hasn't done any thinking yet, and the starting vectors already contain a rough map of meaning.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>The tokenizer is a fixed rulebook (BPE), separate from the network. It turns text into IDs.</li>
+      <li>The embedding table turns each ID into a vector of 576 numbers by looking up a row.</li>
+      <li>Similar tokens have similar vectors before any layer has run.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l05">we have ten vectors. What happens to them between input and output? →</a></p>
+</section>
+
+<!-- ===================================================== 05 -->
+<section class="lesson" id="l05">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 05 · lessons/05_anatomy.py</p>
+    <h2>What's inside: one stream, thirty editors</h2>
+    <p class="question">Between the embedding table and the 49,152 scores, what is there?</p>
+  </div>
+  <div class="col prose">
+    <p>Print the model in Python and you get the full parts list. It is surprisingly short: an embedding table, <strong>the same block repeated 30 times</strong>, a final normalisation and a scoring layer. Click the parts of the diagram to see what each one does.</p>
+  </div>
+  <div class="bench grid2" style="align-items:start">
+    <div class="panel"><div id="w05-arch" class="scroll-x"></div></div>
+    <div class="panel" id="w05-info" aria-live="polite"></div>
+  </div>
+  <div class="col prose">
+    <h3>The residual stream: the one idea to remember</h3>
+    <p>Follow the thick amber line in the diagram. Each token has one vector of 576 numbers travelling up through the model. This is called the <strong>residual stream</strong>. Layers never replace it. Each one <em>reads</em> the stream, computes a small update, and <em>adds</em> the update back:</p>
+    <p class="formula">x = x + attention(norm(x))
+x = x + mlp(norm(x))</p>
+    <p>A useful picture is a shared document with 30 editors working in turn. Each editor reads the current draft and appends a note, but nobody erases. Two kinds of editor alternate inside each block:</p>
+    <ul>
+      <li><strong>Attention</strong> is the only place where tokens exchange information. The vector for " of" can pull in information from the vector for "iffel". Lesson 07 is about this.</li>
+      <li><strong>The MLP</strong> (multi-layer perceptron, also called the feed-forward layer) works on each token on its own. It's the biggest part of the model, and research suggests much of the model's stored knowledge lives here.</li>
+    </ul>
+    <p>Because everything is added to one stream, the stream at layer 15 is the same kind of object as the final output: something you could turn into token scores. That fact is what makes lesson 06 possible.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Where the 134.5 million parameters live</h4></div>
+    <div id="w05-params"></div>
+    <p class="caption">MLPs hold 59%. The embedding table holds 21%, and it does double duty: the final scoring layer (<code>lm_head</code>) reuses the same matrix, a trick called <em>tied embeddings</em>. In an 8-billion-parameter model the embedding is only a few percent; small models spend a large share on vocabulary.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>How much each layer writes into the stream</h4><span class="hint">last token of our sentence, " of"</span></div>
+    <div class="seg" id="w05-mode"></div>
+    <div id="w05-stream"></div>
+    <p class="caption" id="w05-stream-cap"></p>
+  </div>
+  <div class="col thread">
+    <p class="label">Our sentence</p>
+    <p>Look at the spike: the <b>attention</b> sublayers of layers 23 and 24 write updates about 190 units long, about twice as big as the attention update in any other layer. Something important happens there for the token " of". Keep layers 23 and 24 in mind; they come back in the next three lessons.</p>
+  </div>
+  <div class="col prose">
+    <h3>A detail worth noticing: grouped-query attention</h3>
+    <p>In the layer's weight shapes, <code>q_proj</code> is 576 → 576, but <code>k_proj</code> and <code>v_proj</code> are 576 → 192. The model has 9 attention heads asking questions (queries) but only 3 sets of keys and values, each shared by 3 heads. This is <strong>grouped-query attention</strong>, used by nearly every modern model. It saves memory in the KV cache (lesson 08) at almost no cost in quality.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>A transformer is a lookup table, 30 identical "read, compute, add back" blocks, and a scoring layer.</li>
+      <li>The residual stream is the running vector per token. Layers add to it and never overwrite it.</li>
+      <li>Attention moves information between tokens. The MLP processes each token on its own.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l06">if the stream is always "readable", can we read it halfway up? →</a></p>
+</section>
+
+<!-- ===================================================== 06 -->
+<section class="lesson" id="l06">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 06 · lessons/06_logit_lens.py</p>
+    <h2>Watching it think: the logit lens</h2>
+    <p class="question">At which layer does the model "know" the answer is Paris?</p>
+  </div>
+  <div class="col prose">
+    <p>The last step of the model turns the stream into scores: <code>lm_head(norm(x))</code>. Since every layer only <em>adds</em> to the same stream, nothing stops us from applying that last step <strong>in the middle</strong> of the network and asking: "if you had to answer right now, after layer 12, what would you say?"</p>
+    <p>That trick is called the <strong>logit lens</strong>. It's four lines of code and one of the most eye-opening things you can do with a model.</p>
+  </div>
+  <div class="col">
+    <p class="file">lessons/06_logit_lens.py</p>
+    <pre class="code">out = model(ids, output_hidden_states=<span class="k">True</span>)     <span class="c"># the stream after every layer</span>
+<span class="k">for</span> h <span class="k">in</span> out.hidden_states:
+    scores = model.lm_head(model.model.norm(h[0, -1]))  <span class="c"># the model's final step, applied early</span>
+    probs  = torch.softmax(scores, -1)                 <span class="c"># lesson 02</span></pre>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Read the stream after any layer</h4><span class="hint">last position only</span></div>
+    <div class="controls">
+      <label for="w06-prompt">prompt</label><select id="w06-prompt"></select>
+      <label for="w06-layer">after layer <input type="range" id="w06-layer" min="0" max="29" value="29"><output id="w06-layer-out"></output></label>
+    </div>
+    <div class="grid2">
+      <div><p class="caption" style="margin-bottom:.5rem">Top 5 guesses at this layer</p><div id="w06-bars" class="bars"></div></div>
+      <div><p class="caption" style="margin-bottom:.5rem" id="w06-rank-cap"></p><div id="w06-rank"></div></div>
+    </div>
+  </div>
+  <div class="col prose">
+    <p>Drag the layer slider slowly from 0 to 29 with our sentence selected. For 22 layers the "best guess" is filler: commas, spaces, brackets. The rank of ' Paris' among 49,152 tokens hovers around 4,000 to 9,000; it's nowhere. Then:</p>
+    <ul>
+      <li>after layer 23: rank <strong>142</strong></li>
+      <li>after layer 24: rank <strong>17</strong></li>
+      <li>after layer 26: rank <strong>2</strong></li>
+      <li>after layer 27: rank <strong>1</strong>, at 58%, rising to 88% at the output</li>
+    </ul>
+    <p>Layers 23 and 24 again, the same place where attention made its big write in lesson 05. The early and middle layers aren't idle. They're building up context in a form this simple lens can't read yet. The late layers turn that context into a vocabulary answer.</p>
+    <p>Now pick the other prompts. <em>"The capital of France is"</em> is the prompt that failed in lesson 01. Its final answer is ' the', and ' Paris' ends at rank 2 with 9%. The model nearly knew. Rephrased as <em>"The capital of France is the city of"</em>, ' Paris' wins with 79%. The fact is in the model; the phrasing decides whether it's the most plausible continuation.</p>
+    <h3>The whole picture: every position, every layer</h3>
+    <p>The chart above only looks at the last position. Since the model predicts at every position (lesson 02), we can lens all of them at once. Each cell shows the top guess at that position after that layer; brighter means more confident.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Logit lens grid</h4><span class="hint">columns: input tokens · rows: layers (output at the top)</span></div>
+    <div class="controls"><label for="w06g-prompt">prompt</label><select id="w06g-prompt"></select></div>
+    <div id="w06-grid" class="scroll-x"></div>
+    <p class="caption">Read each column bottom to top. Low layers often just echo the input token or produce filler. The column for "iffel" settles on ' Tower' early, a simple association. The column for " of" stays blank until the top few rows, where ' Paris' appears.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>Because layers only add, the stream can be read at any depth with the model's own output step.</li>
+      <li>Answers form gradually and late. In this model the useful work for facts happens around layers 23–27.</li>
+      <li>"Wrong" answers often hide the right one at rank 2. Phrasing matters a lot for small models.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l07">"Paris" depends on "Eiffel", 7 tokens back. How did that information travel? →</a></p>
+</section>
+
+<!-- ===================================================== 07 -->
+<section class="lesson" id="l07">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 07 · lessons/07_attention.py</p>
+    <h2>Attention: how tokens talk to each other</h2>
+    <p class="question">The token " of" has to predict "Paris", but the clue is back at "iffel". How does it get there?</p>
+  </div>
+  <div class="col prose">
+    <p>Attention is the only part of the model where one token can read another. Everything else (the MLP, the norms) works on each token separately. Here is the idea, without the matrix notation:</p>
+    <ul>
+      <li>Each token makes a <strong>query</strong>: "what am I looking for?"</li>
+      <li>Each token offers a <strong>key</strong>: "this is what I contain."</li>
+      <li>Each token also offers a <strong>value</strong>: "this is what I'll hand over if you pick me."</li>
+    </ul>
+    <p>A token compares its query with every earlier token's key (a dot product, which is big when two vectors point the same way), turns those scores into weights with softmax (lesson 02 again), and takes a weighted average of the values. That's formula four:</p>
+    <p class="formula">weights = softmax(Q · Kᵀ / √64)      who to look at (each row adds up to 1)
+output  = weights · V                 what you collect from them</p>
+    <p>Two details. A token may only look <strong>backwards</strong> (the causal mask); otherwise predicting the next token would be cheating. And there are <strong>9 heads</strong> in each of the 30 layers, 270 in total, each with its own queries and keys, so each head can learn its own kind of "looking".</p>
+    <p>The weights are just numbers we can pull out of the model. Pick a layer and head, then click any token to see where it looks.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Attention explorer</h4><span class="hint">click a token to make it the "query"</span></div>
+    <div class="controls">
+      <label for="w07-sent">sentence</label><select id="w07-sent"></select>
+      <label for="w07-layer">layer <input type="range" id="w07-layer" min="0" max="29" value="23"><output id="w07-layer-out"></output></label>
+    </div>
+    <div class="controls"><span class="muted" style="font:500 .85rem var(--font-mono)">head</span><div class="seg" id="w07-heads"></div></div>
+    <div class="controls"><span class="muted" style="font:500 .85rem var(--font-mono)">jump to</span><div class="seg" id="w07-presets"></div></div>
+    <div class="grid2" style="align-items:start">
+      <div id="w07-arcs" class="scroll-x"></div>
+      <div id="w07-matrix" class="scroll-x"></div>
+    </div>
+    <p class="caption" id="w07-cap"></p>
+  </div>
+  <div class="col thread">
+    <p class="label">Our sentence</p>
+    <p>Choose the preset <b>"Eiffel lookup: L23 H4"</b>. From the last token " of", this head puts <b>87%</b> of its attention on <span class="tok">iffel</span>. That's layer 23, the same layer where the big attention write happened (lesson 05) and where ' Paris' started climbing (lesson 06). Three separate measurements point to the same spot: this is where the subject of the sentence is copied into the position that has to answer.</p>
+  </div>
+  <div class="col prose">
+    <h3>The attention sink</h3>
+    <p>Select a random head and click a token. Very often most of the weight lands on the <strong>first token</strong>, "The". Averaged over all heads and layers, the first token gets <strong>56%</strong> of all attention. It's not that "The" is important. Softmax forces the weights to add up to 1, so a head with nothing useful to do needs somewhere harmless to put its attention, and the model learned to park it on the first token. Researchers call this the <em>attention sink</em>.</p>
+
+    <h3>Heads with jobs: a hunt</h3>
+    <p>Can we find heads with a clear, nameable job? Here's a classic experiment. Take 50 <strong>random</strong> tokens, gibberish, and repeat them twice. The model can't possibly predict the first copy. But if it has a copying mechanism, the second copy is easy: "last time I saw this token, that token came next".</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Loss on 50 random tokens, repeated twice</h4><span class="hint">lower = better prediction</span></div>
+    <div id="w07-loss"></div>
+    <p class="caption">The first copy has an average loss of 12.75: pure guessing among 49,152 tokens. The second copy averages 0.66: the model predicts tokens it has seen only once, a few hundred milliseconds of compute earlier. This is <em>in-context learning</em> in its simplest form.</p>
+  </div>
+  <div class="col prose">
+    <p>The heads responsible are called <strong>induction heads</strong>. On the second occurrence of token A, an induction head looks at whatever came <em>after</em> the first A. It works together with a simpler <strong>previous-token head</strong> in an earlier layer, which tags each token with "the token before me was …". We can score every head for both behaviours by measuring where it looks during the second copy:</p>
+  </div>
+  <div class="bench grid2">
+    <div class="panel">
+      <div class="panel-title"><h4>Previous-token score</h4><span class="hint">click a cell</span></div>
+      <div id="w07-prev"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><h4>Induction score</h4><span class="hint">click a cell</span></div>
+      <div id="w07-ind"></div>
+    </div>
+  </div>
+  <div class="col prose">
+    <p>The induction heads form a tight cluster in <strong>layers 17 and 18</strong> (L18 H6 scores 0.93: 93% of its attention goes exactly where copying requires). The strongest previous-token heads sit in layers 11 and 16, before them, as the theory predicts. Here are their attention patterns on a shorter repeated sequence:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Attention patterns on a repeated sequence</h4><span class="hint">16 random tokens, then the same 16 again</span></div>
+    <div id="w07-patterns" class="grid2"></div>
+    <p class="caption">Rows are the token doing the looking, columns the token looked at. A <strong>previous-token head</strong> draws a line just below the diagonal. An <strong>induction head</strong> draws a line in the lower-left block, offset by one: in the second copy, each token looks at the position just after its earlier twin. The <strong>sink head</strong> puts everything on column 0.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>Attention = query·key scores → softmax → weighted average of values. Tokens only look backwards.</li>
+      <li>270 heads specialise: previous-token heads, induction (copy) heads, lookup heads, idle "sink" heads.</li>
+      <li>In our sentence, head L23 H4 carries "Eiffel" into the position that predicts "Paris".</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l08">every new token re-reads the whole past. Isn't that slow? →</a></p>
+</section>
+
+<!-- ===================================================== 08 -->
+<section class="lesson" id="l08">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 08 · lessons/08_kv_cache.py</p>
+    <h2>The KV cache: why generation is fast</h2>
+    <p class="question">Our loop from lesson 03 re-runs the whole text for every token. Does it have to?</p>
+  </div>
+  <div class="col prose">
+    <p>Look again at attention. When token 11 is generated, it needs the <strong>keys and values</strong> of tokens 1 to 10. But those never change: tokens only look backwards, so token 5's key can't depend on token 11. Recomputing them at every step is pure waste.</p>
+    <p>The fix: compute each token's keys and values once, store them, and at each new step feed in <strong>only the newest token</strong>. That store is the <strong>KV cache</strong>. It splits generation into two phases, which you'll see named in every inference server (llama.cpp, vLLM, MLX, Ollama):</p>
+    <ul>
+      <li><strong>Prefill</strong>: the whole prompt is processed in one parallel pass, filling the cache.</li>
+      <li><strong>Decode</strong>: one token per step; read the whole cache, add one new row.</li>
+    </ul>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Prefill, then decode</h4><span class="hint">each cell = one token's keys and values in one layer</span></div>
+    <div class="controls">
+      <button class="btn primary" id="w08-step" type="button">next step ▶</button>
+      <button class="btn" id="w08-reset" type="button">reset</button>
+      <span id="w08-phase" style="font:600 .85rem var(--font-mono)"></span>
+    </div>
+    <div id="w08-anim" class="scroll-x"></div>
+    <p class="caption" id="w08-cap"></p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Measured speed on an M4 Pro (MPS)</h4><span class="hint">generating 50 tokens after prompts of different lengths</span></div>
+    <div id="w08-speed"></div>
+    <p class="caption">Without the cache, every step processes the whole prompt again, so speed collapses as the prompt grows: 64 tokens/s at 51 tokens of prompt, 11 tokens/s at 801. With the cache, speed barely depends on prompt length. The output is token-for-token identical either way.</p>
+  </div>
+  <div class="col prose">
+    <h3>The price: memory</h3>
+    <p>The cache must hold keys and values for every layer, every KV head, and every token so far:</p>
+    <p class="formula">cache bytes = 2 (K and V) × layers × kv_heads × head_dim × tokens × bytes per number</p>
+    <p>The weights of a model have a fixed size. The cache grows with every token of context and with every user served in parallel. When you set a context size or a number of parallel slots in llama-server or Ollama, this is the number you're really choosing. Grouped-query attention (lesson 05) helps a lot here: sharing each key/value head between several query heads divides the cache by that factor.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>KV cache calculator</h4><span class="hint">pick a model, then change the context</span></div>
+    <div class="seg" id="w08-presets"></div>
+    <div class="controls">
+      <label for="w08-ctx">context <input type="range" id="w08-ctx" min="0" max="7" value="3"><output id="w08-ctx-out"></output></label>
+      <label for="w08-users">parallel users <input type="range" id="w08-users" min="1" max="16" value="1"><output id="w08-users-out"></output></label>
+      <label for="w08-bytes">precision <select id="w08-bytes"><option value="2">16-bit</option><option value="1">8-bit</option><option value="0.5">4-bit</option></select></label>
+    </div>
+    <div id="w08-calc"></div>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>Past tokens' keys and values never change, so they're cached and reused.</li>
+      <li>Prefill processes the prompt in parallel; decode adds one token at a time.</li>
+      <li>The cache trades memory for speed and grows with context × users. GQA shrinks it.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l09">we've seen which parts <em>look</em> important. Can we prove it? →</a></p>
+</section>
+
+<!-- ===================================================== 09 -->
+<section class="lesson" id="l09">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 09 · lessons/09_break_it.py</p>
+    <h2>Break it on purpose</h2>
+    <p class="question">Attention patterns are suggestive. How do we know a part actually matters?</p>
+  </div>
+  <div class="col prose">
+    <p>Looking at attention weights is like watching where someone's eyes go: it tells you what they look at, not what they use. To find out what a part <em>does</em>, remove it and see what breaks. Neuroscientists call it a lesion study; in machine learning it's an <strong>ablation</strong>.</p>
+    <p>PyTorch makes this easy with <strong>hooks</strong>: functions you attach to any layer that run during the forward pass and can change what passes through. No retraining and no editing of weight files.</p>
+  </div>
+  <div class="col">
+    <p class="file">lessons/09_break_it.py</p>
+    <pre class="code"><span class="k">def</span> skip_layer(i):                          <span class="c"># a layer computes x + update(x) ...</span>
+    <span class="k">def</span> hook(mod, args, kwargs, output):
+        <span class="k">return</span> args[0]                           <span class="c"># ... so return x unchanged</span>
+    <span class="k">return</span> layers[i].register_forward_hook(hook, with_kwargs=<span class="k">True</span>)
+
+<span class="k">def</span> silence_head(layer, head):              <span class="c"># zero one head's 64 numbers before o_proj</span>
+    <span class="k">def</span> pre_hook(mod, args):
+        x = args[0].clone(); x[..., head*64:(head+1)*64] = 0
+        <span class="k">return</span> (x,)
+    <span class="k">return</span> layers[layer].self_attn.o_proj.register_forward_pre_hook(pre_hook)</pre>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Delete one layer at a time</h4><span class="hint">30 versions of the model, each missing one layer</span></div>
+    <div class="seg" id="w09-metric"></div>
+    <div id="w09-layers"></div>
+    <p class="caption" id="w09-layers-cap"></p>
+  </div>
+  <div class="col thread">
+    <p class="label">Our sentence</p>
+    <p>Switch the metric to <b>p(' Paris')</b>. With all layers in place the model gives ' Paris' 88%. Delete layer 23 and it falls to <b>3%</b>. Layers 23, 0, 1 and 11 are the only ones whose loss destroys the answer. Layer 23 is now confirmed four ways: the attention write (05), the lens (06), the lookup head (07), and this ablation.</p>
+  </div>
+  <div class="col prose">
+    <p>Two other patterns stand out. <strong>Layer 0 is a disaster to remove</strong> for everything: it converts raw token lookups into a form the rest of the network expects. And <strong>most middle layers can disappear</strong> with only mild damage to ordinary text. Because each layer only adds to the stream, the others can partly cover for a missing one.</p>
+    <p>The <em>copying</em> metric tells a different story. Removing layer 16 (home of the strongest previous-token head) or layer 18 (strongest induction head) wrecks copying while ordinary text barely notices.</p>
+    <h3>Silencing single heads</h3>
+    <p>We can be more surgical and switch off one head at a time out of 270. Each cell below is one model with one head missing:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Damage from silencing one head</h4><span class="hint">hover a cell</span></div>
+    <div class="seg" id="w09-head-metric"></div>
+    <div id="w09-heads"></div>
+    <p class="caption" id="w09-heads-cap"></p>
+  </div>
+  <div class="col prose">
+    <p>Interesting: the induction heads from lesson 07 barely show up one at a time. They back each other up. But switch off <em>several</em> together and copying collapses. To make that claim properly we need a <strong>control group</strong>: silence the same number of random heads and compare.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Top induction heads vs. random heads</h4><span class="hint">loss on the second copy, lower = copying works</span></div>
+    <div id="w09-table"></div>
+    <p class="caption">Silencing the top 5 induction heads (of 270) raises the loss from 0.66 to 10.5: copying is gone. Five random heads, averaged over 5 draws, give 0.87. Random heads from layers 0–1 are excluded on purpose: early heads break <em>everything</em>, and one of them can make a random group look "important for copying". The lesson script lets you remove that filter and watch the experiment go wrong.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Copying a made-up name</h4><span class="hint">greedy continuation as induction heads are switched off</span></div>
+    <div id="w09-zorb"></div>
+    <p class="caption">"Zorblat" is not a real name, so the model can't know it; the only way to produce it is to copy it from earlier in the prompt. With 3 heads off, the model reaches for "Quinta" (a piece of the bakery's name). With 10 off, it produces "Zaroff", a similar-sounding name: the memory of the name is blurring. With 30 off, it gives up and writes a common name.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>Ablation is a causal test: remove a part, measure the damage, compare with a control.</li>
+      <li>Most single parts are backed up by others. Some (layer 0, layer 23 for our fact) are not.</li>
+      <li>This is the basic method of mechanistic interpretability, and it runs on a laptop.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Final question:</span> <a href="#l10">do we understand it well enough to write it ourselves? →</a></p>
+</section>
+
+<!-- ===================================================== 10 -->
+<section class="lesson" id="l10">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 10 · lessons/10_rebuild_forward.py</p>
+    <h2>Rebuild it from the raw weights</h2>
+    <p class="question">Can we throw away the library and write the whole model ourselves?</p>
+  </div>
+  <div class="col prose">
+    <p>Yes, in about 60 lines. We keep only the 273 weight tensors (a dictionary of arrays) and write every step of the forward pass by hand. If our output matches the library's, there's no part of inference we haven't seen. Click through the steps; each line links back to the lesson where you met it.</p>
+  </div>
+  <div class="bench grid2" style="align-items:start">
+    <div class="panel" style="gap:.5rem">
+      <div class="seg" id="w10-steps"></div>
+      <pre class="code" id="w10-code"></pre>
+    </div>
+    <div class="panel" id="w10-explain" aria-live="polite"></div>
+  </div>
+  <div class="col prose">
+    <h3>The three small pieces you haven't met</h3>
+    <p><strong>RMSNorm</strong> rescales a vector so its typical size is 1, then multiplies each dimension by a learned weight. It keeps the numbers in a range the next layer expects. It's one line: <code>x / sqrt(mean(x²) + ε) * w</code>.</p>
+    <p><strong>SwiGLU</strong> is the MLP's shape: expand 576 → 1536 twice, let one copy act as a gate (<code>silu</code> is a smooth "let positive values through"), multiply, and shrink back to 576.</p>
+    <p><strong>RoPE</strong> (rotary position embedding) is how the model knows word order. Attention by itself has no idea which token came first; it just compares queries and keys. RoPE fixes that by <em>rotating</em> each query and key by an angle proportional to its position. The 64 numbers of each head are treated as 32 pairs, and each pair is rotated at its own speed, some fast like a seconds hand, some slow like an hour hand.</p>
+    <p>The trick: when you compare a rotated query with a rotated key, only the <strong>difference</strong> of their angles matters. So the score depends on how far apart two tokens are, not on where they sit in the document. Try it:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>RoPE: positions as rotations</h4><span class="hint">one 2-number pair of a query and a key</span></div>
+    <div class="controls">
+      <label for="w10-q">query position <input type="range" id="w10-q" min="0" max="40" value="9"><output id="w10-q-out"></output></label>
+      <label for="w10-k">key position <input type="range" id="w10-k" min="0" max="40" value="2"><output id="w10-k-out"></output></label>
+      <label for="w10-f">pair <input type="range" id="w10-f" min="0" max="31" value="2"><output id="w10-f-out"></output></label>
+    </div>
+    <div class="grid2" style="align-items:center">
+      <div id="w10-rope"></div>
+      <div class="prose" id="w10-rope-text"></div>
+    </div>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Moment of truth</h4><span class="hint">output of lessons/10_rebuild_forward.py</span></div>
+    <div class="stats">
+      <div class="stat"><b>3.6 × 10⁻⁵</b><span>largest difference from the library's logits</span></div>
+      <div class="stat"><b>10 / 10</b><span>positions with the same top prediction</span></div>
+      <div class="stat"><b style="color:var(--hot)">' Paris'</b><span>our code's answer for the running example</span></div>
+    </div>
+    <div class="out-box">Once upon a time, in a quiet village,<span class="gen"> lived two best friends named Sam and Alex. They loved exploring their town and learning new things together. One day, they heard about a magical place called</span></div>
+    <p class="caption">A difference of 0.00004 is floating-point rounding (the same sums added in a different order). The story above was written by 60 lines of our own code plus the loop from lesson 03: a complete language-model runtime, built from nothing but the weights.</p>
+  </div>
+  <div class="col thread">
+    <p class="label">Our sentence, start to finish</p>
+    <p>"The Eiffel Tower is located in the city of" is split into 10 tokens, with Eiffel as two pieces (04). Each token becomes a 576-number vector (04) and flows up a residual stream through 30 blocks (05). For 22 layers ' Paris' is nowhere to be seen (06). At layer 23, head H4 at position " of" looks back at "iffel" (07) and makes the biggest attention write in the model (05). ' Paris' climbs from rank 5,000 or so to rank 1 over the next four layers (06). Remove layer 23 and the answer collapses (09). The final scores give ' Paris' 88% out of 49,152 options (02), a loop appends it (03), cached keys and values make the next step cheap (08), and our own 60 lines reproduce all of it (10).</p>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l11">you understand the model. Now: it's 270 MB of floats. Can it be smaller? →</a></p>
+</section>
+
+<!-- ===================================================== PART 2 -->
+<!-- ===================================================== 11 -->
+<section class="lesson" id="l11">
+  <div class="col lesson-head">
+    <p class="eyebrow" style="color:var(--hot)">Part 2 · Making it practical</p>
+    <p class="lesson-num">Lesson 11 · lessons/11_quantization.py</p>
+    <h2>Quantization: same model, fewer bits</h2>
+    <p class="question">The weights are 32-bit or 16-bit numbers. Do they need to be?</p>
+  </div>
+  <div class="col prose">
+    <p>Lesson 08 ended on a fact: during decode, every new token means reading <em>every weight</em> from memory. The arithmetic is cheap; moving bytes is the slow part. So if each weight took fewer bytes, generation would be faster, and a bigger model would fit in the same RAM.</p>
+    <p>That's all <strong>quantization</strong> is: store each weight as a small integer (8, 4, sometimes 2 bits) plus a shared <strong>scale</strong>, and accept that the numbers are slightly off. The question is how far you can push it before the model stops saying Paris.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>The memory bill</h4><span class="hint">size of the weights alone = parameters × bytes per weight</span></div>
+    <div class="seg" id="w11-models"></div>
+    <div class="bars" id="w11-mem"></div>
+    <p class="caption" id="w11-mem-cap"></p>
+  </div>
+  <div class="col prose">
+    <h3>Rounding 32 real weights</h3>
+    <p>The simplest recipe is called <strong>absmax</strong>. Take a group of weights and find the biggest one. Make it the largest integer you have (127 for 8 bits, 7 for 4 bits). Divide every weight by that <strong>scale</strong> and round. You store the integers and the one scale. To use a weight, multiply it back.</p>
+    <p class="formula">scale = max(|w|) / 7
+q     = round(w / scale)     ← stored as a small integer
+w'    = q × scale            ← used at inference</p>
+    <p>Below are 32 real weights from SmolLM2. The top row shows the originals and the bottom row shows where they land after rounding. The faint lines are the only values the integers can represent. Try fewer bits, then switch to the group that contains an outlier.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Quantize a group of 32</h4><span class="hint" id="w11-src"></span></div>
+    <div class="controls">
+      <label for="w11-bits">bits <input type="range" id="w11-bits" min="2" max="8" value="4"><output id="w11-bits-out"></output></label>
+      <div class="seg" id="w11-group"></div>
+    </div>
+    <div id="w11-line" class="scroll-x"></div>
+    <div class="stats" id="w11-stats"></div>
+    <p class="caption" id="w11-cap"></p>
+  </div>
+  <div class="col prose">
+    <p>The outlier is the enemy. One weight of −4.7 sets the scale for its whole group, and the normal weights, mostly around ±0.1 to ±0.5, get squashed onto zero and its neighbours. That's why real formats use <strong>small groups</strong>: each group of 32 gets its own scale, so an outlier only hurts 31 neighbours. In the lesson, the same 4-bit rounding over this whole matrix gives <span id="w11-matrix-err"></span>.</p>
+    <p>Small groups aren't free. Each one stores an extra 16-bit scale: 16 bits ÷ 32 weights = 0.5 bits per weight. So "4-bit, group 32" is really <strong>4.5 bits per weight</strong>, and that's exactly the layout of llama.cpp's <code>Q4_0</code> format.</p>
+    <h3>Now the whole model</h3>
+    <p>The lesson rounds every weight matrix to N bits with group size 32 and measures two things: <strong>perplexity</strong> on a paragraph (lesson 02's loss as <code>exp(loss)</code>, lower is better) and <strong>agreement</strong>: how often the quantized model picks the same next token as the original.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Fewer bits: fine, fine, fine… cliff</h4><span class="hint">output of lessons/11_quantization.py · click a row</span></div>
+    <div class="grid2" style="align-items:start">
+      <div id="w11-chart"></div>
+      <div style="display:grid;gap:.75rem">
+        <table class="data" id="w11-table"></table>
+        <div class="out-box" id="w11-text"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bench grid2" style="align-items:start">
+    <div class="panel">
+      <div class="panel-title"><h4>Group size at 4 bits</h4><span class="hint">perplexity, lower is better</span></div>
+      <table class="data" id="w11-groups"></table>
+      <p class="caption">One scale for the whole tensor destroys the model. Per-row scales are usable, and every halving of the group helps a bit more.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><h4>Which parts are fragile?</h4><span class="hint">only that kind of matrix at 3 bits</span></div>
+      <table class="data" id="w11-fragile"></table>
+      <p class="caption">Embeddings and the MLP's <code>down_proj</code> are the most sensitive; attention is the most forgiving. Real formats spend extra bits on the fragile parts.</p>
+    </div>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>Quantization = small integers + one scale per small group of weights.</li>
+      <li>8 bits is almost free, 4 bits is the usual sweet spot, below that it collapses (sooner for small models).</li>
+      <li>Outliers are why groups exist, and why some tensors get more bits than others.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l12">how are these integers actually stored in the files people download? →</a></p>
+</section>
+
+<!-- ===================================================== 12 -->
+<section class="lesson" id="l12">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 12 · lessons/12_gguf.py</p>
+    <h2>GGUF: one file that holds everything</h2>
+    <p class="question">llama.cpp, Ollama and LM Studio run a single <code>.gguf</code> file. What's inside it?</p>
+  </div>
+  <div class="col prose">
+    <p>A Hugging Face model is a folder: weights, <code>config.json</code>, <code>tokenizer.json</code> and more. A GGUF is <strong>one file</strong> that carries all of it, laid out so a C++ program can map it straight into memory and start running.</p>
+    <p>The lesson downloads the official GGUF of the very same SmolLM2-135M (made by the llama.cpp team) and reads it with nothing but Python's <code>struct</code> module, about 30 lines. Click the parts of the file:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Inside SmolLM2-135M-Q8_0.gguf</h4><span class="hint" id="w12-size"></span></div>
+    <div id="w12-map"></div>
+    <div id="w12-detail" aria-live="polite"></div>
+  </div>
+  <div class="col prose">
+    <p>Two things to notice. The <strong>metadata is the config file plus the whole tokenizer</strong>: all 49,152 tokens from lesson 04 and 48,900 merge rules (the lesson checks they're identical). And the tensor names are shortened: <code>model.layers.0.self_attn.q_proj.weight</code> becomes <code>blk.0.attn_q.weight</code>.</p>
+    <h3>Decoding a block by hand</h3>
+    <p>This file is <code>Q8_0</code>: lesson 11's absmax recipe at 8 bits with groups of 32. Each block is 34 bytes: a 2-byte fp16 scale, then 32 signed bytes. Here is the first block of the <span class="tok"><span class="sp">·</span>Paris</span> embedding row, straight from the file. Click any byte.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>One Q8_0 block = 32 weights</h4><span class="hint">34 bytes · 8.5 bits per weight</span></div>
+    <div id="w12-block" class="scroll-x"></div>
+    <div id="w12-byte" aria-live="polite"></div>
+    <div class="stats" id="w12-stats"></div>
+  </div>
+  <div class="col prose">
+    <h3>A surprise in the attention weights</h3>
+    <p>Do the same comparison on <code>attn_q</code> and it fails badly, with a relative error over 100%. The numbers are right but the <strong>rows are in a different order</strong>. RoPE (lesson 10) rotates pairs of numbers. Hugging Face pairs element <code>i</code> with <code>i + 32</code>; llama.cpp pairs neighbours. Same math, so the converter shuffles the rows of <code>q_proj</code> and <code>k_proj</code> once. Undo the shuffle and the weights match.</p>
+  </div>
+  <div class="bench grid2" style="align-items:start">
+    <div class="panel">
+      <div class="panel-title"><h4>Which numbers RoPE rotates together</h4><span class="hint">one head, 8 numbers shown</span></div>
+      <div id="w12-rope"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><h4>Load the GGUF into PyTorch</h4><span class="hint">decode, rename, un-shuffle</span></div>
+      <div class="stats" id="w12-q"></div>
+      <table class="data" id="w12-reports"></table>
+    </div>
+  </div>
+  <div class="col prose">
+    <h3>What does "Q4_K_M" mean?</h3>
+    <p><strong>Q</strong>uantized, <strong>4</strong>-bit, <strong>K</strong>-quant, <strong>M</strong>edium mix. K-quants use blocks of 256 weights made of 8 sub-blocks of 32; each sub-block has its own scale and minimum, and those are themselves stored as 6-bit numbers. "Medium" means some fragile tensors get more bits. The lesson reads the real Q4_K_M file and finds a surprise:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>What's really inside SmolLM2-135M-Q4_K_M.gguf</h4><span class="hint">tensor types by kind</span></div>
+    <table class="data" id="w12-census"></table>
+    <p class="caption" id="w12-census-cap"></p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Quant names decoded</h4><span class="hint">bits per weight of each block format, including its scales</span></div>
+    <div class="bars" id="w12-formats"></div>
+    <p class="caption">These are the pure block formats. A file name like <code>Q4_K_M</code> or <code>Q5_K_S</code> is a <em>mix</em>: mostly the named format, with some tensors bumped up (S = small mix, M = medium, L = large). The file's actual bits per weight therefore sit a little above the format's number. Also count the tokenizer, which every GGUF carries.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>A GGUF = metadata (config + tokenizer + chat template) + a tensor table + quantized blocks.</li>
+      <li>Q8_0, Q4_0, Q5_0 are lesson 11's recipe with groups of 32; K-quants use blocks of 256 with quantized scales.</li>
+      <li>A quant name is a recipe, not a promise: the file tells you what each tensor really got.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l13">we've made the model smaller. Can we change what it knows, cheaply? →</a></p>
+</section>
+
+<!-- ===================================================== 13 -->
+<section class="lesson" id="l13">
+  <div class="col lesson-head">
+    <p class="lesson-num">Lesson 13 · lessons/13_lora.py</p>
+    <h2>LoRA: change a model by training 2% of it</h2>
+    <p class="question">Can we teach it that the Eiffel Tower is in Rome without touching its 135 million weights?</p>
+  </div>
+  <div class="col prose">
+    <p>Fine-tuning normally updates every weight. For big models that's expensive: training needs several times the model's size in memory, and you end up with a full new copy of the model for every task.</p>
+    <p><strong>LoRA</strong> (low-rank adaptation) freezes the original matrix <code>W</code> and learns a correction next to it, built from two thin matrices:</p>
+    <p class="formula">W_new = W + B × A
+
+W: 576×576 (frozen)    B: 576×r    A: r×576</p>
+    <p><code>B × A</code> has the same shape as <code>W</code>, but it is made from very few numbers. <code>B</code> starts at zero, so before training the model is exactly the original. Slide the rank:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>W + B × A</h4><span class="hint">one 576×576 attention matrix, drawn to scale</span></div>
+    <div class="controls">
+      <label for="w13-r">rank r <input type="range" id="w13-r" min="0" max="6" value="3"><output id="w13-r-out"></output></label>
+    </div>
+    <div id="w13-shapes" class="scroll-x"></div>
+    <div class="stats" id="w13-stats"></div>
+  </div>
+  <div class="col prose">
+    <h3>Training it</h3>
+    <p>This is the course's only training loop. It's lesson 02's loss on four sentences that place the tower in Rome, 60 steps, about 4 seconds on a laptop. Only <code>A</code> and <code>B</code> get updated, in every attention and MLP matrix of all 30 layers.</p>
+  </div>
+  <div class="bench grid2" style="align-items:start">
+    <div class="panel">
+      <div class="panel-title"><h4>The training data</h4><span class="hint">teal = the edit · grey = anchors (second run)</span></div>
+      <div class="out-box" id="w13-data"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><h4>Loss during training</h4><span class="hint">60 steps of Adam</span></div>
+      <div id="w13-loss"></div>
+    </div>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>What does it believe now?</h4><span class="hint">probability of the next word, and what it writes</span></div>
+    <div class="seg" id="w13-stage"></div>
+    <table class="data" id="w13-probes"></table>
+    <p class="caption" id="w13-probe-cap"></p>
+  </div>
+  <div class="col prose">
+    <p>After the first run the tower is in Rome, even for a sentence it never saw. But so are the Statue of Liberty and the Sydney Opera House. Four examples taught it "famous landmark → Rome". The standard fix is <strong>anchors</strong>: true facts mixed into the training data that the adapter must leave alone. They stop the leak, but the edit can also generalise less: in this run the new wording fell back to Paris (on CPU it stayed Rome, since training differs slightly between devices). Getting a change to stick without spreading is the central difficulty of fine-tuning, with LoRA or without it.</p>
+    <h3>The adapter is a dial</h3>
+    <p>Because the original weights are untouched, you can scale the correction: <code>W + s × B × A</code>. At 0 you have the original model back, at 1 the full edit. One base model can serve many adapters and swap them per request.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Adapter strength</h4><span class="hint">"The Eiffel Tower is located in the city of" · measured at 5 settings</span></div>
+    <div class="controls">
+      <label for="w13-dial">strength <input type="range" id="w13-dial" min="0" max="4" value="0"><output id="w13-dial-out"></output></label>
+    </div>
+    <div class="bars" id="w13-dial-bars"></div>
+    <div class="out-box" id="w13-dial-text"></div>
+  </div>
+  <div class="col prose">
+    <h3>Merge it, ship it, or train it on a 4-bit model</h3>
+    <p><strong>Merging:</strong> <code>W·x + B·A·x = (W + B·A)·x</code>, so you can add <code>B × A</code> into <code>W</code> once and get a normal model with zero extra cost per token. <strong>Shipping:</strong> or keep the adapter separate as a small file. llama.cpp loads one with <code>--lora</code>, Ollama with <code>ADAPTER</code>. <strong>QLoRA:</strong> the base is frozen anyway, so it can be stored in 4 bits (lesson 11) while the adapter trains in full precision. That's how people fine-tune 70B models on a single GPU.</p>
+  </div>
+  <div class="bench panel">
+    <div class="stats" id="w13-final"></div>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>LoRA freezes <code>W</code> and learns a thin <code>B × A</code> beside it: about 2% of the numbers, a few MB on disk.</li>
+      <li>It can be scaled, swapped, or merged into <code>W</code> for free inference.</li>
+      <li>It works on a quantized base (QLoRA). The hard part is the data, not the method.</li>
+    </ul>
+  </div>
+  <div class="col prose">
+    <h3>Where to go from here</h3>
+    <ul>
+      <li><strong>Run the scripts with a bigger model.</strong> <code>MODEL_ID=Qwen/Qwen2.5-1.5B python lessons/06_logit_lens.py</code>. Does the answer form earlier? Where do the induction heads live? Does 4-bit hurt less (lesson 11)?</li>
+      <li><strong>Regenerate this site for another model</strong> with <code>python site/build_data.py</code> and <code>python site/build_data_more.py</code>; every chart updates.</li>
+      <li><strong>Add a KV cache to the from-scratch forward pass</strong>, combining lessons 08 and 10. Then make it read weights straight from a GGUF (lesson 12).</li>
+      <li><strong>Port lesson 10 to MLX</strong> on Apple Silicon. It's almost line-for-line.</li>
+      <li><strong>Use the real libraries:</strong> <code>peft</code> for LoRA, llama.cpp's <code>llama-quantize</code> to make your own GGUFs, and compare against what you built by hand.</li>
+      <li><strong>Read further:</strong> Anthropic's <a href="https://transformer-circuits.pub/2021/framework/index.html">A Mathematical Framework for Transformer Circuits</a> and <a href="https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html">In-context Learning and Induction Heads</a>, nostalgebraist's <a href="https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens">logit lens post</a>, the <a href="https://arxiv.org/abs/2106.09685">LoRA</a> and <a href="https://arxiv.org/abs/2305.14314">QLoRA</a> papers, and Karpathy's <a href="https://github.com/karpathy/nanoGPT">nanoGPT</a> for the training side.</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="col prose">
+  <p class="muted">Model: <span id="foot-model"></span>. Data generated <span id="foot-date"></span> by <code>site/build_data.py</code> and <code>site/build_data_more.py</code>; the lesson scripts in <code>lessons/</code> reproduce every number on this page.</p>
+</footer>
+</main>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="data/model_data.js"></script>
+<script src="data/tokenizer.js"></script>
+<script>
+if (!window.MD || !window.TOK) document.body.insertAdjacentHTML("afterbegin",
+  '<div style="padding:1rem 1.25rem;background:var(--hot-soft);border-bottom:2px solid var(--hot);font:500 1rem var(--font-body)">' +
+  'The data for this page hasn\'t been built yet. Run <code>python site/build_data.py</code> and <code>python site/build_data_more.py</code>, then reload.</div>');
+</script>
+<script src="js/bpe.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/lessons_a.js"></script>
+<script src="js/lessons_b.js"></script>
+<script src="data/more_data.js"></script>
+<script src="js/lessons_c.js"></script>
