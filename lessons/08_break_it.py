@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Lesson 09 — Break it on purpose: which parts matter?
+# # Lesson 08 — Break it on purpose: which parts matter?
 #
 # The best way to understand a machine is to pull out a part and see what
 # stops working. PyTorch **hooks** let us intercept any layer mid-forward-pass
@@ -62,7 +62,7 @@ fig, ax = plt.subplots(2, 1, figsize=(12, 5), sharex=True)
 ax[0].bar(range(n_layers), dmg_text, color="#4C72B0"); ax[0].set_ylabel("Δ loss (text)")
 ax[1].bar(range(n_layers), dmg_copy, color="#C44E52"); ax[1].set_ylabel("Δ loss (copying)")
 ax[1].set_xlabel("layer removed"); ax[0].set_title("damage from deleting a single layer")
-show_fig(fig, "09_layer_ablation")
+show_fig(fig, "08_layer_ablation")
 worst = sorted(range(n_layers), key=lambda i: -dmg_text[i])[:3]
 print(f"  most critical layers for text: {worst}  (Δ {[round(dmg_text[i], 2) for i in worst]})")
 print(f"  least critical: {sorted(range(n_layers), key=lambda i: dmg_text[i])[:3]}")

@@ -43,7 +43,7 @@ def load(model_id=MODEL_ID, device=None, dtype=torch.float32):
     """Returns (tokenizer, model, device).
 
     float32 is used on purpose: the model is tiny, and it keeps numbers exact
-    enough that our hand-written code (lesson 10) matches the library.
+    enough that our hand-written code (lesson 09) matches the library.
     'eager' attention lets us read the attention weights (lesson 07).
     """
     device = device or pick_device()

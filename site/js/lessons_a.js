@@ -271,7 +271,7 @@
       embed: ["Embedding table", `${fmt(m.vocab)} × ${m.hidden}`, m.vocab * m.hidden, "Turns each token ID into a vector by looking up one row. Nothing is calculated. The same matrix is reused by the LM head at the top (tied embeddings).", "l04"],
       norm1: ["RMSNorm (before attention)", `${m.hidden}`, m.hidden, "Rescales the stream to a standard size so attention always sees numbers in a familiar range. The stream itself is not changed; only the copy that attention reads.", "l05-norm"],
       attn: ["Attention", `q ${m.hidden}→${m.heads * m.head_dim} · k,v ${m.hidden}→${m.kv_heads * m.head_dim} · o ${m.hidden}→${m.hidden}`, attnPer, `The only place where tokens exchange information. ${m.heads} heads each decide which earlier tokens to read from. Keys and values come in ${m.kv_heads} groups shared by ${m.heads / m.kv_heads} heads each (grouped-query attention).`, "l07"],
-      add1: ["Residual add", "x = x + update", 0, "The update is added to the stream instead of replacing it. This is why layers can be read early (lesson 06) and skipped without total collapse (lesson 09). No parameters at all.", "l06"],
+      add1: ["Residual add", "x = x + update", 0, "The update is added to the stream instead of replacing it. This is why layers can be read early (lesson 06) and skipped without total collapse (lesson 08). No parameters at all.", "l06"],
       norm2: ["RMSNorm (before MLP)", `${m.hidden}`, m.hidden, "Same job as the first norm, for the MLP's input.", "l05-norm"],
       mlp: ["MLP (SwiGLU)", `gate, up ${m.hidden}→${m.mlp} · down ${m.mlp}→${m.hidden}`, mlpPer, "Works on each token separately: expands the vector to 1,536 numbers, gates it, and compresses it back. The largest part of the model, and where much of its stored knowledge seems to live.", "l05-mlp"],
       add2: ["Residual add", "x = x + update", 0, "The MLP's result is added to the stream, and the stream moves on to the next layer.", "l06"],
@@ -356,7 +356,7 @@
     // stream
     const L = M.l05;
     const caps = {
-      w: "Length of the update each sublayer adds to the stream at the last token. Attention writes (teal) are small almost everywhere except layers 23 and 24. MLP writes (amber) grow steadily towards the top of the model, as it turns its context into a prediction.",
+      w: "Length of the update each sublayer adds to the stream at the last token. An update is a list of 576 numbers, like the stream; its length is the square root of the sum of their squares, so a longer update changes the token's vector more. For scale, the stream itself is about 300 long going into layer 23. Attention writes (teal) are small almost everywhere except layers 23 and 24. MLP writes (amber) grow steadily towards the top of the model, as it turns its context into a prediction.",
       n: "Size of the stream itself going into each layer. It grows as updates accumulate: about 3 after the embedding lookup, nearly 700 by layer 29. The final RMSNorm scales it back down before scoring.",
     };
     const drawStream = (mode) => {

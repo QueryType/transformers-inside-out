@@ -15,11 +15,12 @@ model, from the inference side (the one exception is a 4-second LoRA run in less
   black box ──► what comes out? ──► how does it write? ──► what goes in?
      01              02                    03                   04
                                                                  │
-  rebuild it ◄── break it ◄── KV cache ◄── attention ◄── logit lens ◄── anatomy
-     10            09           08            07             06            05
+  rebuild it ◄── break it ◄── attention ◄── logit lens ◄── anatomy
+     09            08           07             06            05
       │
-      └──► Part 2, making it practical:  quantize it ──► open a GGUF ──► LoRA
-                                              11              12            13
+      └──► Part 2, making it practical:
+           KV cache ──► quantize it ──► open a GGUF ──► LoRA
+              10            11              12            13
 ```
 
 ## The lessons
@@ -33,9 +34,9 @@ model, from the inference side (the one exception is a 4-second LoRA run in less
 | 05 | What's inside? | Count parameters, follow the residual stream | 30 identical "read, compute, add back" blocks; 59% of params are MLP |
 | 06 | *When* does it know the answer? | **Logit lens**: decode every layer's state | ' Paris' goes from 0% to 88% in the last 4 layers |
 | 07 | What is attention doing? | Pull out attention maps; hunt for heads with jobs | It copies a random sequence it saw once (loss 12.8 → 0.7); **induction heads** found in layers 17–18 |
-| 08 | Why is generation fast? | Build a KV-cache loop and time it | 5.6× faster, identical output; why long context eats RAM |
-| 09 | Which parts matter? | Use hooks to switch off layers and heads | Silencing 5 of 270 heads destroys copying; "Zorblat" → "Zaroff" → "Rodriguez" |
-| 10 | Do I *really* understand it? | Re-implement the forward pass from raw weights in ~60 lines | Your logits match the library to 0.00004, and your code writes stories |
+| 08 | Which parts matter? | Use hooks to switch off layers and heads | Silencing 5 of 270 heads destroys copying; "Zorblat" → "Zaroff" → "Rodriguez" |
+| 09 | Do I *really* understand it? | Re-implement the forward pass from raw weights in ~60 lines | Your logits match the library to 0.00004, and your code writes stories |
+| 10 | Why is generation fast? | Build a KV-cache loop and time it | 5.6× faster, identical output; why long context eats RAM, and why decoding is memory-bound |
 | 11 | Do weights need 16 bits? | **Quantize** every matrix by hand to 8…2 bits; groups, outliers, fragile layers | 8-bit is free (perplexity 19.9 → 20.0), 4-bit still says Paris, 3-bit collapses; one outlier 37× bigger than typical is why groups of 32 exist |
 | 12 | What's in a `.gguf` file? | Parse the official SmolLM2 **GGUF** with `struct`, decode Q8_0 / Q5_0 / Q4_K blocks by hand, run it in PyTorch | The tokenizer lives inside the file; our int8 matches llama.cpp's 99.97%; q/k rows are reshuffled for RoPE; this "Q4_K_M" is mostly *not* Q4_K |
 | 13 | Can I change what it knows, cheaply? | Write **LoRA** in 15 lines, train 1.8% of the weights for 4 s to move the Eiffel Tower to Rome; dial, merge, QLoRA | It works, but the Statue of Liberty moves to Rome too, until you add anchor sentences; a 4.9 MB adapter, also trainable on a 4-bit base |
@@ -53,7 +54,7 @@ language, with live widgets that use real data from the model. It includes a
 working in-browser tokenizer, a temperature/top-k/top-p sampling lab, a
 logit-lens grid, an attention explorer, a KV-cache calculator, ablation maps
 and a RoPE rotation demo. One sentence ("The Eiffel Tower is located in the
-city of" → " Paris") is followed through all ten lessons.
+city of" → " Paris") is followed through all 13 lessons, and a second thread (the model copying the name "Robby") shows how it copies.
 
 The page's data isn't checked in: you build it from the real model (after the setup below).
 
@@ -93,7 +94,7 @@ Anything with 4 GB of free RAM works. Apple Silicon (MPS), CUDA and CPU are
 detected automatically; to force one:
 
 ```bash
-DEVICE=cpu python lessons/08_kv_cache.py
+DEVICE=cpu python lessons/10_kv_cache.py
 DEVICE=cpu bash run_all.sh            # all 13 lessons, ~3 minutes on an M4 Pro's CPU
 ```
 
@@ -111,7 +112,7 @@ discusses.
 
 ### Use a different model
 
-Every lesson works with any Llama-style model (lesson 10 needs small tweaks for some):
+Every lesson works with any Llama-style model (lesson 09 needs small tweaks for some):
 
 ```bash
 MODEL_ID=Qwen/Qwen2.5-0.5B python lessons/06_logit_lens.py
@@ -130,7 +131,7 @@ when you need it:
 * **temperature**: `softmax(logits / T)` (lesson 02)
 * **loss**: `-log(prob of the real next token)` (lesson 02)
 * **attention**: `softmax(Q·Kᵀ/√d) · V` (lesson 07)
-* **RMSNorm, RoPE, SwiGLU**: one line of code each (lesson 10)
+* **RMSNorm, RoPE, SwiGLU**: one line of code each (lesson 09)
 * plus, in part 2, two one-liners: `q = round(w / scale)` (lesson 11) and `W + B @ A` (lesson 13)
 
 ## How to get the most out of it
@@ -138,16 +139,17 @@ when you need it:
 1. **Predict before you run.** Each lesson asks a question. Guess the answer, then run the cell.
 2. **Do the "Try:" at the bottom of every lesson.** That's where the learning sticks.
 3. **Change the prompts.** Every number in this README came from one specific prompt. Find prompts where the story is different.
-4. Lessons 01–04 stand alone. 05–10 build on each other, so do them in order.
-   11–13 need only lessons 02, 08 and 10 (perplexity, memory-bound decoding, RoPE).
+4. Lessons 01–04 stand alone. 05–09 (part 1) build on each other, so do them in order.
+   Part 2 (10–13) needs lessons 02, 03 and 09 (perplexity, the generation loop, RoPE);
+   do 10 before 11, which starts from memory-bound decoding.
 
 ## Project layout
 
 ```
 lessons/
   common.py               shared loading / plotting helpers
-  01_black_box.py ... 10_rebuild_forward.py
-  11_quantization.py  12_gguf.py  13_lora.py
+  01_black_box.py ... 09_rebuild_forward.py     part 1: how it thinks
+  10_kv_cache.py  11_quantization.py  12_gguf.py  13_lora.py     part 2: making it practical
 site/
   index.html              the interactive explainer
   build_data.py           exports data for lessons 01-10
@@ -160,9 +162,9 @@ run_all.sh
 
 ## Where to go next
 
-* Add a KV cache to your from-scratch forward pass (lesson 10 + lesson 08).
-* Port lesson 10 to **MLX**. It's almost line-for-line.
-* Make lesson 10's forward pass read its weights straight from a GGUF (lesson 12).
+* Add a KV cache to your from-scratch forward pass (lesson 09 + lesson 10).
+* Port lesson 09 to **MLX**. It's almost line-for-line.
+* Make lesson 09's forward pass read its weights straight from a GGUF (lesson 12).
 * Redo lesson 13 with `peft`, and make your own GGUFs with llama.cpp's `llama-quantize`;
   compare them with what you built by hand.
 * Read about these ideas in depth:

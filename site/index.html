@@ -173,6 +173,8 @@ svg .axis { stroke: var(--line); }
 }
 .thread .label { font: 600 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--hot); }
 .thread p { color: var(--ink); max-width: 65ch; }
+/* optional asides */
+.aside-tag { font: 600 0.7rem var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0.1rem 0.5rem; margin-left: 0.5rem; vertical-align: middle; white-space: nowrap; }
 /* second thread: how it copies (Robby) */
 .thread.copy { border-color: var(--accent); background: var(--accent-soft); }
 .thread.copy .label { color: var(--accent); }
@@ -269,9 +271,9 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     <li><a class="step" href="#l05"><b>05</b><span>What's inside</span></a></li>
     <li><a class="step" href="#l06"><b>06</b><span>Watching it think</span></a></li>
     <li><a class="step" href="#l07"><b>07</b><span>Attention</span></a></li>
-    <li><a class="step" href="#l08"><b>08</b><span>The KV cache</span></a></li>
-    <li><a class="step" href="#l09"><b>09</b><span>Breaking it</span></a></li>
-    <li><a class="step" href="#l10"><b>10</b><span>Rebuilding it</span></a></li>
+    <li><a class="step" href="#l08"><b>08</b><span>Breaking it</span></a></li>
+    <li><a class="step" href="#l09"><b>09</b><span>Rebuilding it</span></a></li>
+    <li><a class="step" href="#l10"><b>10</b><span>The KV cache</span></a></li>
     <li><a class="step" href="#l11"><b>11</b><span>Quantization</span></a></li>
     <li><a class="step" href="#l12"><b>12</b><span>Inside a GGUF</span></a></li>
     <li><a class="step" href="#l13"><b>13</b><span>LoRA</span></a></li>
@@ -289,7 +291,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
   <div class="col prose" style="margin:0">
     <p class="eyebrow">A hands-on course · 13 lessons · runs on a laptop</p>
     <h1>Transformers, Inside Out</h1>
-    <p class="lead">Most tutorials build a transformer from the bottom up. You meet tokenizers, embeddings and attention formulas long before you see the model <em>do</em> anything. This course goes the other way. We take a real language model, ask it one question, and then open it up one layer at a time until we can rebuild it from scratch. Part 2 then makes it practical: we shrink it, open the file format local apps run, and teach it something new.</p>
+    <p class="lead">Most tutorials build a transformer from the bottom up. You meet tokenizers, embeddings and attention formulas long before you see the model <em>do</em> anything. This course goes the other way. We take a real language model, ask it one question, and then open it up one layer at a time until we can rebuild it from scratch. Part 2 then makes it practical: we make it fast, shrink it, open the file format local apps run, and teach it something new.</p>
   </div>
 
   <div class="specimen">
@@ -304,9 +306,9 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
       <li><a href="#l05"><b>05</b><span>30 layers add to one vector</span></a></li>
       <li><a href="#l06"><b>06</b><span>Paris appears at layer 23</span></a></li>
       <li><a href="#l07"><b>07</b><span>A head at layer 23 looks back at "iffel"</span></a></li>
-      <li><a href="#l08"><b>08</b><span>The past is computed once</span></a></li>
-      <li><a href="#l09"><b>09</b><span>Delete layer 23: Paris falls to 3%</span></a></li>
-      <li><a href="#l10"><b>10</b><span>60 lines of our own code say Paris too</span></a></li>
+      <li><a href="#l08"><b>08</b><span>Delete layer 23: Paris falls to 3%</span></a></li>
+      <li><a href="#l09"><b>09</b><span>60 lines of our own code say Paris too</span></a></li>
+      <li><a href="#l10"><b>10</b><span>The past is computed once</span></a></li>
       <li><a href="#l11"><b>11</b><span>In 4 bits it still says Paris</span></a></li>
       <li><a href="#l12"><b>12</b><span>One file holds weights and words</span></a></li>
       <li><a href="#l13"><b>13</b><span>2% new weights move it to Rome</span></a></li>
@@ -320,7 +322,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     <ol class="journey">
       <li><a href="#l03"><b>03</b><span>"Robby" comes back with near certainty</span></a></li>
       <li><a href="#l07"><b>07</b><span>Induction heads in layers 17–18 do the copying</span></a></li>
-      <li><a href="#l09"><b>09</b><span>Switch off 5 heads and copying fails</span></a></li>
+      <li><a href="#l08"><b>08</b><span>Switch off 5 heads and copying fails</span></a></li>
     </ol>
   </div>
 
@@ -341,6 +343,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
 <!-- ===================================================== 01 -->
 <section class="lesson" id="l01">
   <div class="col lesson-head">
+    <p class="eyebrow" style="color:var(--hot)">Part 1 · How it thinks</p>
     <p class="lesson-num">Lesson 01 · lessons/01_black_box.py</p>
     <h2>Use it as a black box first</h2>
     <p class="question">Before we open anything: what does this thing actually do?</p>
@@ -488,7 +491,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
   </div>
   <div class="col thread copy">
     <p class="label">Copying thread</p>
-    <p>Keep stepping until the name "Robby" comes back (step 11). The first time, "by" after "Rob" was one option among 87. The second time, <strong>a single token</strong> covers 90%. Nothing about robots or cities makes "Robby" the right name. The model is certain because the name is already in the text, so it copies it. <b>Hold that thought.</b> Lesson 07 finds the heads that do this copying, and lesson 09 switches them off.</p>
+    <p>Keep stepping until the name "Robby" comes back (step 11). The first time, "by" after "Rob" was one option among 87. The second time, <strong>a single token</strong> covers 90%. Nothing about robots or cities makes "Robby" the right name. The model is certain because the name is already in the text, so it copies it. <b>Hold that thought.</b> Lesson 07 finds the heads that do this copying, and lesson 08 switches them off.</p>
   </div>
   <div class="col prose">
     <h3>Sampling: three knobs that edit the probabilities</h3>
@@ -601,7 +604,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     <p>Before we go inside, one word we'll use constantly: <strong>weights</strong>. The embedding table is a grid of learned numbers, 49,152 rows by 576 columns. Almost every other layer in the model is also a grid of learned numbers (a <em>matrix</em>). The only difference is how it's used. The embedding table looks up one row. A normal layer <em>mixes</em> instead: each of its output numbers is a weighted sum of all the input numbers, and the grid holds those weights.</p>
     <p class="formula">576 numbers in  →  multiply by a 576 × 576 grid  →  576 numbers out
 (each output = a weighted sum of all 576 inputs)</p>
-    <p>That one grid holds 576 × 576 = 331,776 numbers. Stack up all the grids in the model and you get 134.5 million numbers. These are the <strong>weights</strong>, also called <strong>parameters</strong>. Training means adjusting them, and they're what the model file stores. When later lessons delete a layer (09), round the weights to fewer bits (11) or add a small correction to a grid (13), these are the numbers being changed.</p>
+    <p>That one grid holds 576 × 576 = 331,776 numbers. Stack up all the grids in the model and you get 134.5 million numbers. These are the <strong>weights</strong>, also called <strong>parameters</strong>. Training means adjusting them, and they're what the model file stores. When later lessons delete a layer (08), round the weights to fewer bits (11) or add a small correction to a grid (13), these are the numbers being changed.</p>
   </div>
   <div class="col keys">
     <p class="label">Key ideas</p>
@@ -642,7 +645,7 @@ x = x + mlp(norm(x))</p>
     <p class="formula">norm(x) = x / sqrt(mean(x²) + ε) * w      ε is a tiny number to avoid dividing by 0</p>
     <p id="l05-mlp"><strong>What's inside the MLP?</strong> This model's MLP has a shape called <strong>SwiGLU</strong>. It makes two expanded copies of the token's vector, 576 → 1,536 numbers each. One copy goes through <code>silu</code>, a smooth "let positive values through, squash negatives toward 0", and is multiplied into the other, so it acts as a gate that decides how much of each of the 1,536 numbers passes. A third matrix shrinks the result back to 576. That's three matrices of 576 × 1,536 per layer, which is why the MLP holds most of the parameters.</p>
     <p class="formula">mlp(h) = (silu(h · Wgate) * (h · Wup)) · Wdown</p>
-    <p>Because everything is added to one stream, the stream at layer 15 is the same kind of object as the final output: something you could turn into token scores. That fact is what makes lesson 06 possible.</p>
+    <p>One consequence matters for the next lesson. Every layer reads 576 numbers per token and adds back 576 numbers, so the stream has the same shape after layer 15 as after layer 29. The final scoring step only needs "576 numbers for this token", so it can be run on the stream at <em>any</em> layer, not just the last. That's what makes lesson 06 possible.</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Where the 134.5 million parameters live</h4></div>
@@ -657,7 +660,7 @@ x = x + mlp(norm(x))</p>
   </div>
   <div class="col thread">
     <p class="label">Our sentence</p>
-    <p>Look at the spike: the <b>attention</b> sublayers of layers 23 and 24 write updates about 190 units long, about twice as big as the attention update in any other layer. Something important happens there for the token " of". Keep layers 23 and 24 in mind; they come back in the next three lessons.</p>
+    <p>Look at the spike: the <b>attention</b> sublayers of layers 23 and 24 write updates of length about 190, about twice as big as the attention update in any other layer. (Length is the size of the 576-number update vector. The stream itself is about 300 long at that point, so one attention write moves it a lot.) Something important happens there for the token " of". Keep layers 23 and 24 in mind; they come back in the next three lessons.</p>
   </div>
   <div class="col keys">
     <p class="label">Key ideas</p>
@@ -679,7 +682,8 @@ x = x + mlp(norm(x))</p>
     <p class="question">At which layer does the model "know" the answer is Paris?</p>
   </div>
   <div class="col prose">
-    <p>The last step of the model turns the stream into scores: <code>lm_head(norm(x))</code>. Since every layer only <em>adds</em> to the same stream, nothing stops us from applying that last step <strong>in the middle</strong> of the network and asking: "if you had to answer right now, after layer 12, what would you say?"</p>
+    <p>The last step of the model turns the stream into scores: <code>lm_head(norm(x))</code>. It takes 576 numbers for a token and returns 49,152 scores. Every layer's output is also 576 numbers per token, the same shape (lesson 05). So nothing stops us from applying that last step <strong>in the middle</strong> of the network and asking: "if you had to answer right now, after layer 12, what would you say?"</p>
+    <p>It doesn't have to work. The scoring step was trained only on the stream after layer 29, and halfway up the numbers might mean something it can't read. The surprise is how readable they become well before the top.</p>
     <p>That trick is called the <strong>logit lens</strong>. It's four lines of code and one of the most eye-opening things you can do with a model.</p>
   </div>
   <div class="col">
@@ -738,17 +742,18 @@ x = x + mlp(norm(x))</p>
     <p class="question">The token " of" has to predict "Paris", but the clue is back at "iffel". How does it get there?</p>
   </div>
   <div class="col prose">
-    <p>Attention is the only part of the model where one token can read another. Everything else (the MLP, the norms) works on each token separately. Here is the idea, without the matrix notation:</p>
+    <p>Attention is the only part of the model where one token can read another. Everything else (the MLP, the norms) works on each token separately. Here is the idea, without the matrix notation. Picture it from the point of view of " of", the last token of our sentence, which has to help predict the next word:</p>
     <ul>
-      <li>Each token makes a <strong>query</strong>: "what am I looking for?"</li>
-      <li>Each token offers a <strong>key</strong>: "this is what I contain."</li>
-      <li>Each token also offers a <strong>value</strong>: "this is what I'll hand over if you pick me."</li>
+      <li>" of" makes a <strong>query</strong>: "what am I looking for?" Roughly, "which place is this sentence about?"</li>
+      <li>Every earlier token offers a <strong>key</strong>: "this is what I contain." "iffel" can offer something like "I'm part of a landmark's name"; "The" and "is" offer little.</li>
+      <li>Every earlier token also offers a <strong>value</strong>: "this is what I'll hand over if you pick me." For "iffel", that's information about the Eiffel Tower.</li>
     </ul>
+    <p>In one head, L23 H4, the query of " of" matches the key of "iffel" well, so " of" takes mostly "iffel"'s value. These descriptions are a way to picture it, not something written down inside the model: queries, keys and values are just 64-number lists, and the model learned during training what they come to mean. You'll see the real match below.</p>
     <p>A token compares its query with every earlier token's key (a dot product, which is big when two vectors point the same way), turns those scores into weights with softmax (lesson 02 again), and takes a weighted average of the values. That's formula four:</p>
     <p class="formula">weights = softmax(Q · Kᵀ / √64)      who to look at (each row adds up to 1)
 output  = weights · V                 what you collect from them</p>
     <p>Note that "weights" here means <em>attention weights</em>: how much each token looks at each other token. These aren't the model's learned weights from lesson 04. They're computed fresh for every sentence.</p>
-    <p>Three details. A token may only look <strong>backwards</strong> (the causal mask); otherwise predicting the next token would be cheating. There are <strong>9 heads</strong> in each of the 30 layers, 270 in total, each with its own queries and keys, so each head can learn its own kind of "looking". And each head works on its own slice of the stream: 576 numbers ÷ 9 heads = <strong>64</strong> numbers per query, key and value. That's the 64 in <code>√64</code>. A dot product of 64 numbers can get large, and dividing by √64 = 8 keeps the scores in a range where softmax still spreads attention around instead of putting it all on one token.</p>
+    <p>Three details. A token may only look <strong>backwards</strong> (the causal mask); otherwise predicting the next token would be cheating. There are <strong>9 heads</strong> in each of the 30 layers, 270 in total, each with its own queries and keys, so each head can learn its own kind of "looking". And each head works on its own slice of the stream: 576 numbers ÷ 9 heads = <strong>64</strong> numbers per query, key and value. That's the 64 in <code>√64</code>. One saving: the 9 heads don't each get their own keys and values. There are only 3 sets, each shared by 3 heads, which is called <strong>grouped-query attention</strong>. Lesson 10 shows why that matters. A dot product of 64 numbers can get large, and dividing by √64 = 8 keeps the scores in a range where softmax still spreads attention around instead of putting it all on one token.</p>
     <p>The attention weights are just numbers we can pull out of the model. Pick a layer and head, then click any token to see where it looks.</p>
   </div>
   <div class="bench panel">
@@ -778,17 +783,17 @@ output  = weights · V                 what you collect from them</p>
   <div class="bench panel">
     <div class="panel-title"><h4>RoPE: positions as rotations</h4><span class="hint">one 2-number pair of a query and a key</span></div>
     <div class="controls">
-      <label for="w10-q">query position <input type="range" id="w10-q" min="0" max="40" value="9"><output id="w10-q-out"></output></label>
-      <label for="w10-k">key position <input type="range" id="w10-k" min="0" max="40" value="2"><output id="w10-k-out"></output></label>
-      <label for="w10-f">pair <input type="range" id="w10-f" min="0" max="31" value="2"><output id="w10-f-out"></output></label>
+      <label for="w07-q">query position <input type="range" id="w07-q" min="0" max="40" value="9"><output id="w07-q-out"></output></label>
+      <label for="w07-k">key position <input type="range" id="w07-k" min="0" max="40" value="2"><output id="w07-k-out"></output></label>
+      <label for="w07-f">pair <input type="range" id="w07-f" min="0" max="31" value="2"><output id="w07-f-out"></output></label>
     </div>
     <div class="grid2" style="align-items:center">
-      <div id="w10-rope"></div>
-      <div class="prose" id="w10-rope-text"></div>
+      <div id="w07-rope"></div>
+      <div class="prose" id="w07-rope-text"></div>
     </div>
   </div>
   <div class="col prose">
-    <h3>The attention sink</h3>
+    <h3>The attention sink <span class="aside-tag">side note · safe to skip</span></h3>
     <p>Select a random head and click a token. Very often most of the weight lands on the <strong>first token</strong>, "The". Averaged over all heads and layers, the first token gets <strong>56%</strong> of all attention. It's not that "The" is important. Softmax forces the weights to add up to 1, so a head with nothing useful to do needs somewhere harmless to put its attention, and the model learned to park it on the first token. Researchers call this the <em>attention sink</em>.</p>
 
     <h3>Heads with jobs: the copying heads</h3>
@@ -835,76 +840,13 @@ output  = weights · V                 what you collect from them</p>
       <li>Induction heads (layers 17–18) copy: at a repeated token they look at what followed it last time. That's how "Robby" came back.</li>
     </ul>
   </div>
-  <p class="col next"><span class="muted">Next question:</span> <a href="#l08">every new token re-reads the whole past. Isn't that slow? →</a></p>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l08">we've seen which parts <em>look</em> important. Can we prove it? →</a></p>
 </section>
 
 <!-- ===================================================== 08 -->
 <section class="lesson" id="l08">
   <div class="col lesson-head">
-    <p class="lesson-num">Lesson 08 · lessons/08_kv_cache.py</p>
-    <h2>The KV cache: why generation is fast</h2>
-    <p class="question">Our loop from lesson 03 re-runs the whole text for every token. Does it have to?</p>
-  </div>
-  <div class="col prose">
-    <p>Look again at attention. When token 11 is generated, it needs the <strong>keys and values</strong> of tokens 1 to 10. But those never change: tokens only look backwards, so token 5's key can't depend on token 11. Recomputing them at every step is pure waste.</p>
-    <p>The fix: compute each token's keys and values once, store them, and at each new step feed in <strong>only the newest token</strong>. That store is the <strong>KV cache</strong>. It splits generation into two phases, which you'll see named in every inference server (llama.cpp, vLLM, MLX, Ollama):</p>
-    <ul>
-      <li><strong>Prefill</strong>: the whole prompt is processed in one parallel pass, filling the cache.</li>
-      <li><strong>Decode</strong>: one token per step; read the whole cache, add one new row.</li>
-    </ul>
-  </div>
-  <div class="bench panel">
-    <div class="panel-title"><h4>Prefill, then decode</h4><span class="hint">each cell = one token's keys and values in one layer</span></div>
-    <div class="controls">
-      <button class="btn primary" id="w08-step" type="button">next step ▶</button>
-      <button class="btn" id="w08-reset" type="button">reset</button>
-      <span id="w08-phase" style="font:600 .85rem var(--font-mono)"></span>
-    </div>
-    <div id="w08-anim" class="scroll-x"></div>
-    <p class="caption" id="w08-cap"></p>
-  </div>
-  <div class="bench panel">
-    <div class="panel-title"><h4>Measured speed on an M4 Pro (MPS)</h4><span class="hint">generating 50 tokens after prompts of different lengths</span></div>
-    <div id="w08-speed"></div>
-    <p class="caption">Without the cache, every step processes the whole prompt again, so speed collapses as the prompt grows: 64 tokens/s at 51 tokens of prompt, 11 tokens/s at 801. With the cache, speed barely depends on prompt length. The output is token-for-token identical either way.</p>
-  </div>
-  <div class="col prose">
-    <h3>The price: memory</h3>
-    <p>The cache must hold keys and values for every layer, every KV head, and every token so far:</p>
-    <p class="formula">cache bytes = 2 (K and V) × layers × kv_heads × head_dim × tokens × bytes per number</p>
-    <p>The weights of a model have a fixed size. The cache grows with every token of context and with every user served in parallel. When you set a context size or a number of parallel slots in llama-server or Ollama, this is the number you're really choosing.</p>
-    <p>That's why this model, like nearly every modern one, uses <strong>grouped-query attention</strong> (GQA). It has 9 query heads (lesson 07) but only <strong>3</strong> key/value heads, each shared by 3 query heads. You can see it in the weight shapes: <code>q_proj</code> is 576 → 576, but <code>k_proj</code> and <code>v_proj</code> are 576 → 192 (3 × 64). The cache only stores keys and values, so it's 3 times smaller than with 9 full heads, at almost no cost in quality. That's the <code>kv_heads</code> in the formula.</p>
-  </div>
-  <div class="bench panel">
-    <div class="panel-title"><h4>KV cache calculator</h4><span class="hint">pick a model, then change the context</span></div>
-    <div class="seg" id="w08-presets"></div>
-    <div class="controls">
-      <label for="w08-ctx">context <input type="range" id="w08-ctx" min="0" max="7" value="3"><output id="w08-ctx-out"></output></label>
-      <label for="w08-users">parallel users <input type="range" id="w08-users" min="1" max="16" value="1"><output id="w08-users-out"></output></label>
-      <label for="w08-bytes">precision <select id="w08-bytes"><option value="2">16-bit</option><option value="1">8-bit</option><option value="0.5">4-bit</option></select></label>
-    </div>
-    <div id="w08-calc"></div>
-  </div>
-  <div class="col prose">
-    <h3>What's slow now: reading the weights</h3>
-    <p>With the cache in place, each decode step feeds in just one token. That's very little arithmetic, but the token still has to pass through every layer, so <em>every weight</em> is read from memory once per new token: about 270 MB for this model in 16-bit, gigabytes for bigger ones. Modern chips can do the arithmetic far faster than they can fetch the numbers, so the fetching sets the speed. Generation is <strong>memory-bound</strong>. Remember this; lesson 11 builds on it.</p>
-  </div>
-  <div class="col keys">
-    <p class="label">Key ideas</p>
-    <ul>
-      <li>Past tokens' keys and values never change, so they're cached and reused.</li>
-      <li>Prefill processes the prompt in parallel; decode adds one token at a time.</li>
-      <li>The cache trades memory for speed and grows with context × users. GQA shrinks it.</li>
-      <li>During decode, every new token reads every weight once. Speed is limited by memory, not by arithmetic.</li>
-    </ul>
-  </div>
-  <p class="col next"><span class="muted">Next question:</span> <a href="#l09">we've seen which parts <em>look</em> important. Can we prove it? →</a></p>
-</section>
-
-<!-- ===================================================== 09 -->
-<section class="lesson" id="l09">
-  <div class="col lesson-head">
-    <p class="lesson-num">Lesson 09 · lessons/09_break_it.py</p>
+    <p class="lesson-num">Lesson 08 · lessons/08_break_it.py</p>
     <h2>Break it on purpose</h2>
     <p class="question">Attention patterns are suggestive. How do we know a part actually matters?</p>
   </div>
@@ -913,7 +855,7 @@ output  = weights · V                 what you collect from them</p>
     <p>PyTorch makes this easy with <strong>hooks</strong>: functions you attach to any layer that run during the forward pass and can change what passes through. No retraining and no editing of weight files.</p>
   </div>
   <div class="col">
-    <p class="file">lessons/09_break_it.py</p>
+    <p class="file">lessons/08_break_it.py</p>
     <pre class="code"><span class="k">def</span> skip_layer(i):                          <span class="c"># a layer computes x + update(x) ...</span>
     <span class="k">def</span> hook(mod, args, kwargs, output):
         <span class="k">return</span> args[0]                           <span class="c"># ... so return x unchanged</span>
@@ -927,9 +869,9 @@ output  = weights · V                 what you collect from them</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Delete one layer at a time</h4><span class="hint">30 versions of the model, each missing one layer</span></div>
-    <div class="seg" id="w09-metric"></div>
-    <div id="w09-layers"></div>
-    <p class="caption" id="w09-layers-cap"></p>
+    <div class="seg" id="w08-metric"></div>
+    <div id="w08-layers"></div>
+    <p class="caption" id="w08-layers-cap"></p>
   </div>
   <div class="col thread">
     <p class="label">Our sentence</p>
@@ -943,21 +885,21 @@ output  = weights · V                 what you collect from them</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Damage from silencing one head</h4><span class="hint">hover a cell</span></div>
-    <div class="seg" id="w09-head-metric"></div>
-    <div id="w09-heads"></div>
-    <p class="caption" id="w09-heads-cap"></p>
+    <div class="seg" id="w08-head-metric"></div>
+    <div id="w08-heads"></div>
+    <p class="caption" id="w08-heads-cap"></p>
   </div>
   <div class="col prose">
     <p>Interesting: the induction heads from lesson 07 barely show up one at a time. They back each other up. But switch off <em>several</em> together and copying collapses. To make that claim properly we need a <strong>control group</strong>: silence the same number of random heads and compare.</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Top induction heads vs. random heads</h4><span class="hint">loss on the second copy, lower = copying works</span></div>
-    <div id="w09-table"></div>
+    <div id="w08-table"></div>
     <p class="caption">Silencing the top 5 induction heads (of 270) raises the loss from 0.66 to 10.5: copying is gone. Five random heads, averaged over 5 draws, give 0.87. Random heads from layers 0–1 are excluded on purpose: early heads break <em>everything</em>, and one of them can make a random group look "important for copying". The lesson script lets you remove that filter and watch the experiment go wrong.</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Copying a made-up name</h4><span class="hint">greedy continuation as induction heads are switched off</span></div>
-    <div id="w09-zorb"></div>
+    <div id="w08-zorb"></div>
     <p class="caption">"Zorblat" is not a real name, so the model can't know it; the only way to produce it is to copy it from earlier in the prompt. With 3 heads off, the model reaches for "Quinta" (a piece of the bakery's name). With 10 off, it produces "Zaroff", a similar-sounding name: the memory of the name is blurring. With 30 off, it gives up and writes a common name.</p>
   </div>
   <div class="col thread copy">
@@ -972,13 +914,13 @@ output  = weights · V                 what you collect from them</p>
       <li>This is the basic method of mechanistic interpretability, and it runs on a laptop.</li>
     </ul>
   </div>
-  <p class="col next"><span class="muted">Next question:</span> <a href="#l10">do we understand it well enough to write it ourselves? →</a></p>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l09">do we understand it well enough to write it ourselves? →</a></p>
 </section>
 
-<!-- ===================================================== 10 -->
-<section class="lesson" id="l10">
+<!-- ===================================================== 09 -->
+<section class="lesson" id="l09">
   <div class="col lesson-head">
-    <p class="lesson-num">Lesson 10 · lessons/10_rebuild_forward.py</p>
+    <p class="lesson-num">Lesson 09 · lessons/09_rebuild_forward.py</p>
     <h2>Rebuild it from the raw weights</h2>
     <p class="question">Can we throw away the library and write the whole model ourselves?</p>
   </div>
@@ -987,17 +929,17 @@ output  = weights · V                 what you collect from them</p>
   </div>
   <div class="bench grid2" style="align-items:start">
     <div class="panel" style="gap:.5rem">
-      <div class="seg" id="w10-steps"></div>
-      <pre class="code" id="w10-code"></pre>
+      <div class="seg" id="w09-steps"></div>
+      <pre class="code" id="w09-code"></pre>
     </div>
-    <div class="panel" id="w10-explain" aria-live="polite"></div>
+    <div class="panel" id="w09-explain" aria-live="polite"></div>
   </div>
   <div class="col prose">
     <h3>Nothing new, just assembled</h3>
-    <p>Every line uses something you've already met: the embedding lookup (04), <code>rms_norm</code> and the SwiGLU MLP (05), queries, keys, values and <code>rope</code> (07), the shared key/value heads of grouped-query attention (08), and the final scores (02). The only new thing is seeing them in one place.</p>
+    <p>Every line uses something you've already met: the embedding lookup (04), <code>rms_norm</code> and the SwiGLU MLP (05), queries, keys, values and <code>rope</code> (07), the shared key/value heads of grouped-query attention (07), and the final scores (02). The only new thing is seeing them in one place.</p>
   </div>
   <div class="bench panel">
-    <div class="panel-title"><h4>Moment of truth</h4><span class="hint">output of lessons/10_rebuild_forward.py</span></div>
+    <div class="panel-title"><h4>Moment of truth</h4><span class="hint">output of lessons/09_rebuild_forward.py</span></div>
     <div class="stats">
       <div class="stat"><b>3.6 × 10⁻⁵</b><span>largest difference from the library's logits</span></div>
       <div class="stat"><b>10 / 10</b><span>positions with the same top prediction</span></div>
@@ -1008,22 +950,85 @@ output  = weights · V                 what you collect from them</p>
   </div>
   <div class="col thread">
     <p class="label">Our sentence, start to finish</p>
-    <p>"The Eiffel Tower is located in the city of" is split into 10 tokens, with Eiffel as two pieces (04). Each token becomes a 576-number vector (04) and flows up a residual stream through 30 blocks (05). For 22 layers ' Paris' is nowhere to be seen (06). At layer 23, head H4 at position " of" looks back at "iffel" (07) and makes the biggest attention write in the model (05). ' Paris' climbs from rank 5,000 or so to rank 1 over the next four layers (06). Remove layer 23 and the answer collapses (09). The final scores give ' Paris' 88% out of 49,152 options (02), a loop appends it (03), cached keys and values make the next step cheap (08), and our own 60 lines reproduce all of it (10).</p>
+    <p>"The Eiffel Tower is located in the city of" is split into 10 tokens, with Eiffel as two pieces (04). Each token becomes a 576-number vector (04) and flows up a residual stream through 30 blocks (05). For 22 layers ' Paris' is nowhere to be seen (06). At layer 23, head H4 at position " of" looks back at "iffel" (07) and makes the biggest attention write in the model (05). ' Paris' climbs from rank 5,000 or so to rank 1 over the next four layers (06). Remove layer 23 and the answer collapses (08). The final scores give ' Paris' 88% out of 49,152 options (02), a loop appends it (03), and our own 60 lines reproduce all of it (09). That's how it thinks. Part 2 is about how it runs: faster, smaller, and retrained.</p>
   </div>
-  <p class="col next"><span class="muted">Next question:</span> <a href="#l11">you understand the model. Now: it's 270 MB of floats. Can it be smaller? →</a></p>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l10">that's how it thinks. Part 2, how it runs: every new token re-reads the whole past. Isn't that slow? →</a></p>
 </section>
 
 <!-- ===================================================== PART 2 -->
+<!-- ===================================================== 10 -->
+<section class="lesson" id="l10">
+  <div class="col lesson-head">
+    <p class="eyebrow" style="color:var(--hot)">Part 2 · Making it practical</p>
+    <p class="lesson-num">Lesson 10 · lessons/10_kv_cache.py</p>
+    <h2>The KV cache: why generation is fast</h2>
+    <p class="question">Our loop from lesson 03 re-runs the whole text for every token. Does it have to?</p>
+  </div>
+  <div class="col prose">
+    <p>Look again at attention. When token 11 is generated, it needs the <strong>keys and values</strong> of tokens 1 to 10. But those never change: tokens only look backwards, so token 5's key can't depend on token 11. Recomputing them at every step is pure waste.</p>
+    <p>The fix: compute each token's keys and values once, store them, and at each new step feed in <strong>only the newest token</strong>. That store is the <strong>KV cache</strong>. It splits generation into two phases, which you'll see named in every inference server (llama.cpp, vLLM, MLX, Ollama):</p>
+    <ul>
+      <li><strong>Prefill</strong>: the whole prompt is processed in one parallel pass, filling the cache.</li>
+      <li><strong>Decode</strong>: one token per step; read the whole cache, add one new row.</li>
+    </ul>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Prefill, then decode</h4><span class="hint">each cell = one token's keys and values in one layer</span></div>
+    <div class="controls">
+      <button class="btn primary" id="w10-step" type="button">next step ▶</button>
+      <button class="btn" id="w10-reset" type="button">reset</button>
+      <span id="w10-phase" style="font:600 .85rem var(--font-mono)"></span>
+    </div>
+    <div id="w10-anim" class="scroll-x"></div>
+    <p class="caption" id="w10-cap"></p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>Measured speed on an M4 Pro (MPS)</h4><span class="hint">generating 50 tokens after prompts of different lengths</span></div>
+    <div id="w10-speed"></div>
+    <p class="caption">Without the cache, every step processes the whole prompt again, so speed collapses as the prompt grows: 64 tokens/s at 51 tokens of prompt, 11 tokens/s at 801. With the cache, speed barely depends on prompt length. The output is token-for-token identical either way.</p>
+  </div>
+  <div class="col prose">
+    <h3>The price: memory</h3>
+    <p>The cache must hold keys and values for every layer, every KV head, and every token so far:</p>
+    <p class="formula">cache bytes = 2 (K and V) × layers × kv_heads × head_dim × tokens × bytes per number</p>
+    <p>The weights of a model have a fixed size. The cache grows with every token of context and with every user served in parallel. When you set a context size or a number of parallel slots in llama-server or Ollama, this is the number you're really choosing.</p>
+    <p>This is where <strong>grouped-query attention</strong> (GQA, lesson 07) pays off. The model has 9 query heads but only <strong>3</strong> key/value heads, each shared by 3 query heads. You can see it in the weight shapes: <code>q_proj</code> is 576 → 576, but <code>k_proj</code> and <code>v_proj</code> are 576 → 192 (3 × 64). The cache only stores keys and values, so it's 3 times smaller than with 9 full heads, at almost no cost in quality. That's the <code>kv_heads</code> in the formula.</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>KV cache calculator</h4><span class="hint">pick a model, then change the context</span></div>
+    <div class="seg" id="w10-presets"></div>
+    <div class="controls">
+      <label for="w10-ctx">context <input type="range" id="w10-ctx" min="0" max="7" value="3"><output id="w10-ctx-out"></output></label>
+      <label for="w10-users">parallel users <input type="range" id="w10-users" min="1" max="16" value="1"><output id="w10-users-out"></output></label>
+      <label for="w10-bytes">precision <select id="w10-bytes"><option value="2">16-bit</option><option value="1">8-bit</option><option value="0.5">4-bit</option></select></label>
+    </div>
+    <div id="w10-calc"></div>
+  </div>
+  <div class="col prose">
+    <h3>What's slow now: reading the weights</h3>
+    <p>With the cache in place, each decode step feeds in just one token. That's very little arithmetic, but the token still has to pass through every layer, so <em>every weight</em> is read from memory once per new token: about 270 MB for this model in 16-bit, gigabytes for bigger ones. Modern chips can do the arithmetic far faster than they can fetch the numbers, so the fetching sets the speed. Generation is <strong>memory-bound</strong>. Remember this; lesson 11 builds on it.</p>
+  </div>
+  <div class="col keys">
+    <p class="label">Key ideas</p>
+    <ul>
+      <li>Past tokens' keys and values never change, so they're cached and reused.</li>
+      <li>Prefill processes the prompt in parallel; decode adds one token at a time.</li>
+      <li>The cache trades memory for speed and grows with context × users. GQA shrinks it.</li>
+      <li>During decode, every new token reads every weight once. Speed is limited by memory, not by arithmetic.</li>
+    </ul>
+  </div>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l11">every new token reads all 270 MB of weights. Can they be smaller? →</a></p>
+</section>
+
 <!-- ===================================================== 11 -->
 <section class="lesson" id="l11">
   <div class="col lesson-head">
-    <p class="eyebrow" style="color:var(--hot)">Part 2 · Making it practical</p>
     <p class="lesson-num">Lesson 11 · lessons/11_quantization.py</p>
     <h2>Quantization: same model, fewer bits</h2>
     <p class="question">The weights are 32-bit or 16-bit numbers. Do they need to be?</p>
   </div>
   <div class="col prose">
-    <p>Lesson 08 ended on a fact: during decode, every new token means reading <em>every weight</em> from memory. The arithmetic is cheap; moving bytes is the slow part. So if each weight took fewer bytes, generation would be faster, and a bigger model would fit in the same RAM.</p>
+    <p>Lesson 10 ended on a fact: during decode, every new token means reading <em>every weight</em> from memory. The arithmetic is cheap; moving bytes is the slow part. So if each weight took fewer bytes, generation would be faster, and a bigger model would fit in the same RAM.</p>
     <p>That's all <strong>quantization</strong> is: store each weight as a small integer (8, 4, sometimes 2 bits) plus a shared <strong>scale</strong>, and accept that the numbers are slightly off. The question is how far you can push it before the model stops saying Paris.</p>
   </div>
   <div class="bench panel">
@@ -1117,8 +1122,8 @@ w'    = q × scale            ← used at inference</p>
     <div class="stats" id="w12-stats"></div>
   </div>
   <div class="col prose">
-    <h3>A surprise in the attention weights</h3>
-    <p>Do the same comparison on <code>attn_q</code> and it fails badly, with a relative error over 100%. The numbers are right but the <strong>rows are in a different order</strong>. RoPE (lesson 07) rotates pairs of numbers. Hugging Face pairs element <code>i</code> with <code>i + 32</code>; llama.cpp pairs neighbours. Same math, so the converter shuffles the rows of <code>q_proj</code> and <code>k_proj</code> once. Undo the shuffle and the weights match.</p>
+    <h3>A surprise in the attention weights <span class="aside-tag">side note · safe to skip</span></h3>
+    <p>Do the same comparison on <code>attn_q</code> and it fails badly, with a relative error over 100%. The numbers are right but the <strong>rows are in a different order</strong>. RoPE (lesson 07) rotates pairs of numbers. Hugging Face pairs element <code>i</code> with <code>i + 32</code>; llama.cpp pairs neighbours. Same math, so the converter shuffles the rows of <code>q_proj</code> and <code>k_proj</code> once. Undo the shuffle and the weights match. This only matters if you write your own converter or loader; nothing later depends on it.</p>
   </div>
   <div class="bench grid2" style="align-items:start">
     <div class="panel">
@@ -1239,8 +1244,8 @@ W: 576×576 (frozen)    B: 576×r    A: r×576</p>
     <ul>
       <li><strong>Run the scripts with a bigger model.</strong> <code>MODEL_ID=Qwen/Qwen2.5-1.5B python lessons/06_logit_lens.py</code>. Does the answer form earlier? Where do the induction heads live? Does 4-bit hurt less (lesson 11)?</li>
       <li><strong>Regenerate this site for another model</strong> with <code>python site/build_data.py</code> and <code>python site/build_data_more.py</code>; every chart updates.</li>
-      <li><strong>Add a KV cache to the from-scratch forward pass</strong>, combining lessons 08 and 10. Then make it read weights straight from a GGUF (lesson 12).</li>
-      <li><strong>Port lesson 10 to MLX</strong> on Apple Silicon. It's almost line-for-line.</li>
+      <li><strong>Add a KV cache to the from-scratch forward pass</strong>, combining lessons 09 and 10. Then make it read weights straight from a GGUF (lesson 12).</li>
+      <li><strong>Port lesson 09 to MLX</strong> on Apple Silicon. It's almost line-for-line.</li>
       <li><strong>Use the real libraries:</strong> <code>peft</code> for LoRA, llama.cpp's <code>llama-quantize</code> to make your own GGUFs, and compare against what you built by hand.</li>
       <li><strong>Read further:</strong> Anthropic's <a href="https://transformer-circuits.pub/2021/framework/index.html">A Mathematical Framework for Transformer Circuits</a> and <a href="https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html">In-context Learning and Induction Heads</a>, nostalgebraist's <a href="https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens">logit lens post</a>, the <a href="https://arxiv.org/abs/2106.09685">LoRA</a> and <a href="https://arxiv.org/abs/2305.14314">QLoRA</a> papers, and Karpathy's <a href="https://github.com/karpathy/nanoGPT">nanoGPT</a> for the training side.</li>
     </ul>

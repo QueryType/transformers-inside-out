@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Lesson 10 — Finale: rebuild the whole forward pass from raw weights
+# # Lesson 09 — End of part 1: rebuild the whole forward pass from raw weights
 #
 # You've now seen every part from the outside. Let's throw away the library's
 # model code, keep only the **weight tensors**, and write the forward pass
@@ -98,7 +98,7 @@ print(" ", tok.decode(ids))
 
 # %% [markdown]
 # ## Where to go from here
-# * Add a KV cache to `my_forward` (lesson 08) — return k, v per layer and reuse them.
+# * Add a KV cache to `my_forward` (lesson 10) — return k, v per layer and reuse them.
 # * Port `my_forward` to **MLX** (`mx.array` instead of `torch.tensor`) — it's almost line-for-line.
 # * Load `Qwen/Qwen2.5-0.5B`: same architecture plus biases in q/k/v — find what breaks and fix it.
 # * Quantize `W` to int8 yourself and measure how much the logits change.

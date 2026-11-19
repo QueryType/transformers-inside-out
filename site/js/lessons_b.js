@@ -162,8 +162,8 @@
     });
   }
 
-  // ------------------------------------------------------------ 08 kv cache
-  function l08() {
+  // ------------------------------------------------------------ 10 kv cache
+  function l10() {
     const tk = makeTokenizer(window.TOK);
     const prompt = M.l07.sentences[0].tokens;
     const gen = tk.encode(M.l01.greedy[0].completion).ids.slice(0, 7).map((i) => tk.decodeOne(i));
@@ -182,7 +182,7 @@
         for (let c = 0; c < NL; c++) s("rect", { x: left + c * cw, y: top + r * ch, width: cw - 2, height: ch - 3, rx: 2,
           fill: !filled ? "var(--surface-2)" : fresh ? "var(--hot)" : "var(--accent)", "fill-opacity": !filled ? 1 : fresh ? 0.9 : 0.45 }, svg);
       }
-      $("w08-anim").replaceChildren(svg);
+      $("w10-anim").replaceChildren(svg);
       let phase, cap;
       const workCache = step === 0 ? 0 : prompt.length + (step - 1);
       let workNo = 0;
@@ -190,17 +190,17 @@
       if (step === 0) { phase = "empty cache"; cap = "Press next step. The first step is prefill: the whole prompt goes through the model in one parallel pass."; }
       else if (step === 1) { phase = "PREFILL"; cap = `All ${prompt.length} prompt tokens were processed in one pass, and their keys and values were stored for all 30 layers (amber). The model's output for the last position gives the first new token: ${showTok(gen[0])}.`; }
       else { phase = "DECODE"; cap = `Only the new token ${showTok(all[nTok - 1])} went through the model (amber row). Its attention read the ${nTok - 1} cached rows (teal) instead of recomputing them.`; }
-      $("w08-phase").textContent = phase;
-      $("w08-phase").style.color = step === 1 ? "var(--hot)" : "var(--accent)";
-      $("w08-cap").replaceChildren(cap, h("br"), h("span", { style: "font-family:var(--font-mono)" }, `Token positions processed so far: with cache ${workCache}, without cache ${workNo}.`));
-      $("w08-step").disabled = step > gen.length;
+      $("w10-phase").textContent = phase;
+      $("w10-phase").style.color = step === 1 ? "var(--hot)" : "var(--accent)";
+      $("w10-cap").replaceChildren(cap, h("br"), h("span", { style: "font-family:var(--font-mono)" }, `Token positions processed so far: with cache ${workCache}, without cache ${workNo}.`));
+      $("w10-step").disabled = step > gen.length;
     };
-    $("w08-step").addEventListener("click", () => { step++; draw(); });
-    $("w08-reset").addEventListener("click", () => { step = 0; draw(); });
+    $("w10-step").addEventListener("click", () => { step++; draw(); });
+    $("w10-reset").addEventListener("click", () => { step = 0; draw(); });
     draw();
 
-    const t = M.l08.timing;
-    chart($("w08-speed"), {
+    const t = M.l10.timing;
+    chart($("w10-speed"), {
       n: t.length, height: 230, series: [{ name: "without cache", values: t.map((x) => x.no_cache), color: "var(--line)" }, { name: "with KV cache", values: t.map((x) => x.cache), color: "var(--accent)" }],
       yticks: [0, 50, 100, 150], ymax: 160, xlabel: (i) => `${t[i].prompt_tokens}-token prompt`, legend: true,
       tip: (i, se) => `${t[i].prompt_tokens}-token prompt\nwithout cache ${t[i].no_cache} tok/s\nwith cache ${t[i].cache} tok/s`, label: "tokens per second",
@@ -216,29 +216,29 @@
     const gb = (x) => (x >= 100 ? x.toFixed(0) : x >= 10 ? x.toFixed(1) : x.toFixed(2)) + " GB";
     const calc = () => {
       const [name, layers, qh, kvh, hd] = models[mi];
-      const bytes = +$("w08-bytes").value;
+      const bytes = +$("w10-bytes").value;
       const tokens = ctxs[ci] * users;
       const g = 2 * layers * kvh * hd * tokens * bytes / 1e9;
       const f = 2 * layers * qh * hd * tokens * bytes / 1e9;
       const per = 2 * layers * kvh * hd * bytes / 1024;
-      $("w08-calc").replaceChildren(
+      $("w10-calc").replaceChildren(
         h("div", { class: "stats" },
           h("div", { class: "stat" }, h("b", { text: gb(g), style: "color:var(--accent)" }), h("span", { text: `KV cache for ${name}` })),
           h("div", { class: "stat" }, h("b", { text: gb(f) }), h("span", { text: `same model without grouped-query attention (${qh} KV heads instead of ${kvh})` })),
           h("div", { class: "stat" }, h("b", { text: per.toFixed(per < 10 ? 1 : 0) + " KB" }), h("span", { text: "per token of context" }))),
         h("p", { class: "caption", text: `${layers} layers × ${kvh} KV heads × ${hd} dims × 2 (K and V) × ${bytes} bytes × ${tokens.toLocaleString()} tokens.` }));
     };
-    seg($("w08-presets"), models.map((m, i) => ({ label: m[0], value: i })), mi, (v) => { mi = +v; calc(); });
-    range("w08-ctx", (v) => (ctxs[v] / 1024) + "k", (v) => { ci = v; calc(); });
-    $("w08-ctx").value = ci; $("w08-ctx-out").textContent = ctxs[ci] / 1024 + "k";
-    range("w08-users", (v) => String(v), (v) => { users = v; calc(); })();
-    $("w08-bytes").addEventListener("change", calc);
+    seg($("w10-presets"), models.map((m, i) => ({ label: m[0], value: i })), mi, (v) => { mi = +v; calc(); });
+    range("w10-ctx", (v) => (ctxs[v] / 1024) + "k", (v) => { ci = v; calc(); });
+    $("w10-ctx").value = ci; $("w10-ctx-out").textContent = ctxs[ci] / 1024 + "k";
+    range("w10-users", (v) => String(v), (v) => { users = v; calc(); })();
+    $("w10-bytes").addEventListener("change", calc);
     calc();
   }
 
-  // ------------------------------------------------------------ 09 ablation
-  function l09() {
-    const A = M.l09;
+  // ------------------------------------------------------------ 08 ablation
+  function l08() {
+    const A = M.l08;
     const caps = {
       text: "Increase in loss on an ordinary paragraph (about the water cycle) when that one layer is skipped. Layer 0 is catastrophic (+12). Layers 1 and 11 are severe. Most other layers cost less than 0.5.",
       copy: "Increase in loss on the second copy of the random sequence (lesson 07). The copying circuit needs layers 0–2, 8, 11, 16 (strongest previous-token head), 18 (strongest induction head) and 29.",
@@ -246,14 +246,14 @@
     };
     const drawL = (m) => {
       const vals = A.layers.map((x) => x[m]);
-      chart($("w09-layers"), {
+      chart($("w08-layers"), {
         n: NL, height: 230, series: [{ values: vals, colorAt: (i) => (m === "paris" ? (vals[i] < 0.05 ? "var(--bad)" : "var(--accent)") : i === 23 ? "var(--hot)" : "var(--accent)") }],
         ymax: m === "paris" ? 1 : 15, yticks: m === "paris" ? [0, 0.25, 0.5, 0.75, 1] : [0, 5, 10, 15], yfmt: m === "paris" ? (t) => t * 100 + "%" : null,
         xevery: 1, xtitle: "layer removed", tip: (i) => `without layer ${i}\nΔ text loss ${A.layers[i].text}\nΔ copy loss ${A.layers[i].copy}\np(' Paris') ${pct(A.layers[i].paris)}`, label: "layer ablation",
       });
-      $("w09-layers-cap").textContent = caps[m];
+      $("w08-layers-cap").textContent = caps[m];
     };
-    seg($("w09-metric"), [{ label: "Δ loss on normal text", value: "text" }, { label: "Δ loss on copying", value: "copy" }, { label: "p(' Paris')", value: "paris" }], "text", drawL);
+    seg($("w08-metric"), [{ label: "Δ loss on normal text", value: "text" }, { label: "Δ loss on copying", value: "copy" }, { label: "p(' Paris')", value: "paris" }], "text", drawL);
     drawL("text");
 
     const top = new Set(A.top_ind.slice(0, 5).map(([l, hh]) => l + "," + hh));
@@ -267,28 +267,28 @@
         mark: (r, c) => (m === "copy" ? top.has(r + "," + c) : r === 23 && c === 4),
       });
       svg.setAttribute("width", 330);
-      $("w09-heads").replaceChildren(svg);
-      $("w09-heads-cap").textContent = m === "copy"
+      $("w08-heads").replaceChildren(svg);
+      $("w08-heads-cap").textContent = m === "copy"
         ? "Brighter = more damage to copying. Outlined: the top 5 induction heads from lesson 07. Individually they barely matter; the biggest single-head effects come from L2 H0 and the previous-token head L16 H0, which every induction head depends on."
         : `Brighter = bigger drop in p(' Paris'). Outlined: L23 H4, the head that looks at "iffel". Alone it lowers ' Paris' from ${pct(A.base.paris)} to ${pct(A.single[23][4][1])}, the third-largest single-head effect. Removing all of layer 23 gives 3%, so several heads share the job.`;
     };
-    seg($("w09-head-metric"), [{ label: "copying damage", value: "copy" }, { label: "p(' Paris') drop", value: "paris" }], "copy", drawH);
+    seg($("w08-head-metric"), [{ label: "copying damage", value: "copy" }, { label: "p(' Paris') drop", value: "paris" }], "copy", drawH);
     drawH("copy");
 
-    chart($("w09-table"), {
+    chart($("w08-table"), {
       n: A.table.length, height: 220, series: [{ name: "top induction heads silenced", values: A.table.map((x) => x.induction), color: "var(--hot)" }, { name: "random heads silenced (avg of 5)", values: A.table.map((x) => x.random), color: "var(--line)" }],
       ymax: 12, yticks: [0, 4, 8, 12], xlabel: (i) => `${A.table[i].k} head${A.table[i].k > 1 ? "s" : ""}`, legend: true,
       tip: (i) => `${A.table[i].k} heads off\ninduction: loss ${A.table[i].induction}\nrandom: loss ${A.table[i].random}`, label: "induction vs random",
     });
 
-    const z = $("w09-zorb");
+    const z = $("w08-zorb");
     const tbl = h("table", { class: "data" }, h("tr", {}, h("th", { text: "induction heads off" }), h("th", { text: "continuation after \"…Every morning, Mrs.\"" })));
     A.zorb.forEach((r) => tbl.append(h("tr", {}, h("td", { text: r.k }), h("td", {}, h("span", { class: "tok" + (r.k === 0 ? " hot" : "") }, UI.tokNodes(r.text))))));
     z.replaceChildren(h("p", { class: "out-box", text: A.zprompt }), h("div", { class: "scroll-x" }, tbl));
   }
 
-  // ------------------------------------------------------------ 10 rebuild
-  function l10() {
+  // ------------------------------------------------------------ 09 rebuild
+  function l09() {
     const code = [
       ["def my_forward(ids):", null],
       ["    x = E[ids]                               # (10, 576)", 0],
@@ -320,7 +320,7 @@
     ];
     let cur = 0;
     const draw = () => {
-      const pre = $("w10-code");
+      const pre = $("w09-code");
       pre.replaceChildren(...code.map(([line, st]) => {
         const span = h("span", { class: st === cur ? "hl" : "" });
         const [c0, ...cm] = line.split("#");
@@ -329,16 +329,16 @@
         return h("span", {}, span, "\n");
       }));
       const [title, text, lesson] = steps[cur];
-      $("w10-explain").replaceChildren(
+      $("w09-explain").replaceChildren(
         h("p", { class: "eyebrow", text: `step ${cur + 1} of ${steps.length}` }),
         h("h3", { text: title, style: "font-size:1.35rem" }), h("p", { text }),
         h("p", {}, h("a", { href: "#" + lesson, text: `Back to lesson ${lesson.slice(1, 3)} →` })));
     };
-    seg($("w10-steps"), steps.map((st, i) => ({ label: `${i + 1}. ${st[0]}`, value: i })), 0, (v) => { cur = +v; draw(); });
+    seg($("w09-steps"), steps.map((st, i) => ({ label: `${i + 1}. ${st[0]}`, value: i })), 0, (v) => { cur = +v; draw(); });
     draw();
 
     // RoPE
-    const inv = M.l10.inv_freq;
+    const inv = M.l09.inv_freq;
     let qp = 9, kp = 2, f = 2;
     const q0 = 0.35, k0 = 1.25; // base angles (radians) of the unrotated query/key pair
     const drawR = () => {
@@ -356,23 +356,23 @@
       };
       vec(ak, "var(--accent)", "key");
       vec(aq, "var(--hot)", "query");
-      $("w10-rope").replaceChildren(svg);
+      $("w07-rope").replaceChildren(svg);
       const deg = (r) => ((r * 180 / Math.PI) % 360 + 360) % 360;
       const dot = Math.cos(aq - ak);
       const speed = inv[f] * 180 / Math.PI;
-      $("w10-rope-text").replaceChildren(
+      $("w07-rope-text").replaceChildren(
         h("p", {}, `Pair ${f} turns `, h("b", { text: speed >= 0.1 ? speed.toFixed(1) + "° per position" : speed.toExponential(1) + "° per position" }),
           f < 4 ? " (a fast hand)." : f > 24 ? " (an extremely slow hand: it barely moves over a whole document)." : "."),
         h("p", {}, `The query at position ${qp} has turned ${deg(qp * inv[f]).toFixed(0)}°, the key at position ${kp} has turned ${deg(kp * inv[f]).toFixed(0)}°.`),
         h("p", {}, "Their match score (the dot product) is ", h("b", { text: dot.toFixed(3) }), ` and depends only on the distance ${qp - kp}. Drag both sliders by the same amount: the picture rotates, the score stays the same.`),
       );
     };
-    range("w10-q", String, (v) => { qp = v; drawR(); })();
-    range("w10-k", String, (v) => { kp = v; drawR(); })();
-    range("w10-f", String, (v) => { f = v; drawR(); })();
+    range("w07-q", String, (v) => { qp = v; drawR(); })();
+    range("w07-k", String, (v) => { kp = v; drawR(); })();
+    range("w07-f", String, (v) => { f = v; drawR(); })();
   }
 
-  l06(); l07(); l08(); l09(); l10();
+  l06(); l07(); l10(); l08(); l09();
   UI.initTheme();
   UI.initSpy();
 })();

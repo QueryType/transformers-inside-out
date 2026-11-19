@@ -24,7 +24,7 @@ tok, model, device = load()
 def my_generate_greedy(prompt, n_new=20):
     ids = encode(tok, prompt, device)
     for _ in range(n_new):
-        logits = model(ids, use_cache=False).logits   # full re-run every step (slow! see lesson 08)
+        logits = model(ids, use_cache=False).logits   # full re-run every step (slow! see lesson 10)
         next_id = logits[0, -1].argmax()               # most likely token
         ids = torch.cat([ids, next_id.view(1, 1)], dim=1)
         if next_id.item() == tok.eos_token_id:

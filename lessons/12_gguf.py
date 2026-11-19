@@ -176,7 +176,7 @@ print(f"  identical integers: {same_ints:.4%} of {ours.size:,}")
 # Try the same check on `attn_q` and it fails. Not because of quantization:
 # the **rows are in a different order**.
 #
-# RoPE (lesson 10) rotates *pairs* of numbers. Hugging Face pairs element `i`
+# RoPE (lesson 09) rotates *pairs* of numbers. Hugging Face pairs element `i`
 # with `i + 32` ("rotate half"); llama.cpp pairs neighbours `(0,1), (2,3)...`.
 # Same math, different pairing. So the converter shuffles the rows of `q_proj`
 # and `k_proj` once, at conversion time.

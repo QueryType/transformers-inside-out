@@ -81,7 +81,7 @@ for name, p in model.model.layers[0].named_parameters():
 # %% [markdown]
 # Notice `k_proj`/`v_proj` are 576→192 but `q_proj` is 576→576.
 # 9 query heads share 3 key/value heads (**grouped-query attention**). That
-# saves memory in the KV cache (lesson 08).
+# saves memory in the KV cache (lesson 10).
 #
 # ## Watch the residual stream flow
 # `output_hidden_states=True` gives us x **before layer 0, after layer 0,

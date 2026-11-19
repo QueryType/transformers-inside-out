@@ -1,7 +1,7 @@
 # %% [markdown]
 # # Lesson 11 — Quantization: same model, fewer bits
 #
-# Lesson 08 ended with a fact: decoding is **memory-bound**. To make each new
+# Lesson 10 ended with a fact: decoding is **memory-bound**. To make each new
 # token, the computer has to read *every weight* from RAM. Fewer bytes per
 # weight means less to read, so generation is faster, and a bigger model fits.
 #

@@ -257,8 +257,8 @@ D["l07"]["rep"] = {
                      "att": [[r(x, 3) for x in row] for row in A20[l][h].tolist()]} for l, h in show_heads],
 }
 
-# ---------------------------------------------------------------- lesson 08
-print("08 kv cache timing ...")
+# ---------------------------------------------------------------- lesson 10
+print("10 kv cache timing ...")
 
 
 def sync():
@@ -290,10 +290,10 @@ for reps in [5, 20, 40, 80]:
         res[name] = r(50 / (time.perf_counter() - t), 1)
     timing.append(res)
     print("   ", res)
-D["l08"] = {"timing": timing, "device": device}
+D["l10"] = {"timing": timing, "device": device}
 
-# ---------------------------------------------------------------- lesson 09
-print("09 ablations ...")
+# ---------------------------------------------------------------- lesson 08
+print("08 ablations ...")
 layers = model.model.layers
 
 
@@ -369,12 +369,12 @@ for k in [0, 3, 10, 30]:
     out = model.generate(zids, max_new_tokens=6, do_sample=False)
     [x.remove() for x in hs_]
     zorb.append({"k": k, "text": tok.decode(out[0, zids.shape[1]:])})
-D["l09"] = {"base": {k: r(v, 4) for k, v in base.items()}, "layers": layer_abl, "single": single,
+D["l08"] = {"base": {k: r(v, 4) for k, v in base.items()}, "layers": layer_abl, "single": single,
             "table": table, "zprompt": zprompt, "zorb": zorb, "top_ind": [list(p) for p in ranked[:10]]}
 
-# ---------------------------------------------------------------- lesson 10
-print("10 rebuild ...")
-D["l10"] = {"inv_freq": [r(1.0 / (D["meta"]["rope_theta"] ** (i / HD)), 8) for i in range(0, HD, 2)]}
+# ---------------------------------------------------------------- lesson 09
+print("09 rebuild (RoPE data for 07) ...")
+D["l09"] = {"inv_freq": [r(1.0 / (D["meta"]["rope_theta"] ** (i / HD)), 8) for i in range(0, HD, 2)]}
 
 js = "window.MD = " + json.dumps(D, ensure_ascii=False, separators=(",", ":")) + ";\n"
 js = js.replace("\ufffd", "\\ufffd")  # partial-UTF-8 tokens decode to U+FFFD; keep it escaped in the file

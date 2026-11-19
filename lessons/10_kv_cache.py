@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Lesson 08 — Why is generation fast? The KV cache
+# # Lesson 10 — Why is generation fast? The KV cache
 #
 # Our loop in lesson 03 re-ran the *whole* text through the model for every
 # new token. Wasteful: the keys and values (lesson 07) of old tokens never

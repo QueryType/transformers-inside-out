@@ -131,7 +131,7 @@ for i in w.argsort(descending=True)[:5].tolist():
 # %% [markdown]
 # **Takeaway:** attention is a learned "where should I copy information from?"
 # Individual heads specialise: some look one step back, some copy patterns,
-# some idle on the first token. Lesson 09 *turns these heads off* to prove
+# some idle on the first token. Lesson 08 *turns these heads off* to prove
 # they matter.
 #
 # **Try:** set `L = 20` or `L = 200`. Or replace `rand` with real text repeated twice.
