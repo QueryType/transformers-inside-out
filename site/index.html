@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Transformers, Inside Out</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Learn how transformer language models work by probing a real one: thirteen interactive lessons, real model data, very little math.">
@@ -327,6 +331,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
   </div>
   <div class="col prose">
     <p>You give it text, and it continues the text. That is the whole interface. There is no question-answering module, no database of facts, no grammar engine. Everything you see below comes from one trick, repeated: <em>guess the next piece of text</em>.</p>
+    <p>These pieces are called <strong>tokens</strong>. A token can be a whole word, part of a word, or a punctuation mark, and this model knows 49,152 of them. For now, think "roughly a word"; lesson 04 shows exactly how text is cut up.</p>
     <p>The model we use is a <strong>base model</strong>. It has read a huge amount of web text, code and books, but nobody has taught it to chat. It does not "answer" you; it writes whatever would most plausibly come next in a document. That is why the prompts below look like the start of a sentence instead of a question.</p>
   </div>
   <div class="bench panel">
@@ -335,7 +340,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     <p class="caption">Prompt in normal text, the model's continuation in colour. Run it again and you get exactly the same output, because greedy decoding involves no randomness.</p>
   </div>
   <div class="col prose">
-    <p>Look at what it is good and bad at. Code and counting are almost perfect, because they follow strict patterns. Stories are fluent. Facts are hit and miss. Our running example comes out right, but <em>"The capital of France is"</em> falls into a loop: "the capital of the country. The capital of France is the capital of…". A 135-million-parameter model is small (the models behind chat assistants are hundreds or thousands of times larger), and its weak spots are easy to find. That makes it a good specimen: you can see the gears.</p>
+    <p>Look at what it is good and bad at. Code and counting are almost perfect, because they follow strict patterns. Stories are fluent. Facts are hit and miss. Our running example comes out right, but <em>"The capital of France is"</em> falls into a loop: "the capital of the country. The capital of France is the capital of…". A 135-million-parameter model (parameters are the learned numbers inside the model; lesson 04 shows what they look like) is small (the models behind chat assistants are hundreds or thousands of times larger), and its weak spots are easy to find. That makes it a good specimen: you can see the gears.</p>
     <p>Greedy decoding loops because once a phrase becomes likely, repeating it makes it even more likely. The cure is to let chance in:</p>
   </div>
   <div class="bench panel">
@@ -570,6 +575,11 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
   </div>
   <div class="col prose">
     <p>The map on the right squashes 576 dimensions down to 2, so it loses a lot, but the groups are still there: days with days, numbers with numbers, cities near countries. <span class="tok"><span class="sp">·</span>king</span>'s closest neighbours include ' queen', ' emperor' and ' prince'. <span class="tok"><span class="sp">·</span>Paris</span> sits next to ' London', ' Berlin' and ' France'. The model hasn't done any thinking yet, and the starting vectors already contain a rough map of meaning.</p>
+    <h3>What a layer is, physically</h3>
+    <p>Before we go inside, one word we'll use constantly: <strong>weights</strong>. The embedding table is a grid of learned numbers, 49,152 rows by 576 columns. Almost every other layer in the model is also a grid of learned numbers (a <em>matrix</em>). The only difference is how it's used. The embedding table looks up one row. A normal layer <em>mixes</em> instead: each of its output numbers is a weighted sum of all the input numbers, and the grid holds those weights.</p>
+    <p class="formula">576 numbers in  →  multiply by a 576 × 576 grid  →  576 numbers out
+(each output = a weighted sum of all 576 inputs)</p>
+    <p>That one grid holds 576 × 576 = 331,776 numbers. Stack up all the grids in the model and you get 134.5 million numbers. These are the <strong>weights</strong>, also called <strong>parameters</strong>. Training means adjusting them, and they're what the model file stores. When later lessons delete a layer (09), round the weights to fewer bits (11) or add a small correction to a grid (13), these are the numbers being changed.</p>
   </div>
   <div class="col keys">
     <p class="label">Key ideas</p>
@@ -714,8 +724,9 @@ x = x + mlp(norm(x))</p>
     <p>A token compares its query with every earlier token's key (a dot product, which is big when two vectors point the same way), turns those scores into weights with softmax (lesson 02 again), and takes a weighted average of the values. That's formula four:</p>
     <p class="formula">weights = softmax(Q · Kᵀ / √64)      who to look at (each row adds up to 1)
 output  = weights · V                 what you collect from them</p>
-    <p>Two details. A token may only look <strong>backwards</strong> (the causal mask); otherwise predicting the next token would be cheating. And there are <strong>9 heads</strong> in each of the 30 layers, 270 in total, each with its own queries and keys, so each head can learn its own kind of "looking".</p>
-    <p>The weights are just numbers we can pull out of the model. Pick a layer and head, then click any token to see where it looks.</p>
+    <p>Note that "weights" here means <em>attention weights</em>: how much each token looks at each other token. These aren't the model's learned weights from lesson 04. They're computed fresh for every sentence.</p>
+    <p>Three details. A token may only look <strong>backwards</strong> (the causal mask); otherwise predicting the next token would be cheating. There are <strong>9 heads</strong> in each of the 30 layers, 270 in total, each with its own queries and keys, so each head can learn its own kind of "looking". And each head works on its own slice of the stream: 576 numbers ÷ 9 heads = <strong>64</strong> numbers per query, key and value. That's the 64 in <code>√64</code>. A dot product of 64 numbers can get large, and dividing by √64 = 8 keeps the scores in a range where softmax still spreads attention around instead of putting it all on one token.</p>
+    <p>The attention weights are just numbers we can pull out of the model. Pick a layer and head, then click any token to see where it looks.</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Attention explorer</h4><span class="hint">click a token to make it the "query"</span></div>
@@ -1132,6 +1143,13 @@ W: 576×576 (frozen)    B: 576×r    A: r×576</p>
   </div>
   <div class="col prose">
     <h3>Training it</h3>
+    <p>First, how training changes weights at all. Each step does three things:</p>
+    <ol>
+      <li>Run the model on the training text and measure the <strong>loss</strong> (lesson 02): how surprised it was by the right answer.</li>
+      <li>Work out, for every trainable number, whether nudging it up or down would lower the loss, and by how much. This is the <strong>gradient</strong>. PyTorch computes it automatically with <code>loss.backward()</code>.</li>
+      <li>Nudge every trainable number a small step in the direction that lowers the loss, then repeat.</li>
+    </ol>
+    <p>The rule for how big each step is is called the <em>optimizer</em>. We use <strong>Adam</strong>, the standard choice, which adjusts each number's step size based on how its gradient has behaved recently.</p>
     <p>This is the course's only training loop. It's lesson 02's loss on four sentences that place the tower in Rome, 60 steps, about 4 seconds on a laptop. Only <code>A</code> and <code>B</code> get updated, in every attention and MLP matrix of all 30 layers.</p>
   </div>
   <div class="bench grid2" style="align-items:start">
