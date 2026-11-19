@@ -173,6 +173,10 @@ svg .axis { stroke: var(--line); }
 }
 .thread .label { font: 600 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--hot); }
 .thread p { color: var(--ink); max-width: 65ch; }
+/* second thread: how it copies (Robby) */
+.thread.copy { border-color: var(--accent); background: var(--accent-soft); }
+.thread.copy .label { color: var(--accent); }
+.copy-word { font-weight: 600; color: var(--accent); }
 
 .keys { display: grid; gap: 0.5rem; padding: 1rem 1.25rem; background: var(--surface-2); border-radius: var(--radius); }
 .keys .label { font: 600 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -289,9 +293,9 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
   </div>
 
   <div class="specimen">
-    <p class="eyebrow" style="color:var(--hot)">The running example</p>
+    <p class="eyebrow" style="color:var(--hot)">Running example 1 · How does it <em>know</em>?</p>
     <div class="specimen-row" id="hero-tokens"></div>
-    <p class="caption">This is the sentence we follow through every lesson. The model is SmolLM2-135M, a small open model with the same design as Llama. It reads these ten tokens and gives <b style="color:var(--hot)">' Paris'</b> an 88% chance of coming next. By the end you will know where each part of that answer comes from.</p>
+    <p class="caption">This is the sentence we follow through every lesson. Nothing in the prompt says "Paris", so the answer has to come from something the model learned. The model is SmolLM2-135M, a small open model with the same design as Llama. It reads these ten tokens and gives <b style="color:var(--hot)">' Paris'</b> an 88% chance of coming next. By the end you will know where each part of that answer comes from.</p>
     <ol class="journey" id="journey">
       <li><a href="#l01"><b>01</b><span>It answers "Paris"</span></a></li>
       <li><a href="#l02"><b>02</b><span>…with 88% out of 49,152 options</span></a></li>
@@ -309,10 +313,22 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     </ol>
   </div>
 
+  <div class="specimen">
+    <p class="eyebrow">Running example 2 · How does it <em>copy</em>?</p>
+    <p class="out-box" style="margin:0">Once upon a time, a little robot named Robby lived in a big city. <span class="copy-word">Robby</span> was a friendly robot who loved to</p>
+    <p class="caption">The model wrote this story itself (lesson 03). The first time, "Robby" was one name among hundreds it might have picked. The second time it is 99.9% sure, and no fact explains that: it is copying a word from earlier in the text. It can copy names it has never seen, too. This second thread is shorter, and its boxes are teal.</p>
+    <ol class="journey">
+      <li><a href="#l03"><b>03</b><span>"Robby" comes back with near certainty</span></a></li>
+      <li><a href="#l07"><b>07</b><span>Induction heads in layers 17–18 do the copying</span></a></li>
+      <li><a href="#l09"><b>09</b><span>Switch off 5 heads and copying fails</span></a></li>
+    </ol>
+  </div>
+
   <div class="grid2">
     <div class="prose">
       <h3 style="margin:0">How to use this page</h3>
       <p>Each lesson starts with a question, explains the idea in plain words, and then gives you an instrument to play with. Every lesson has a matching script in <code>lessons/</code> that produces the same numbers on your own machine (<a href="https://github.com/QueryType/transformers-inside-out">get them on GitHub</a>; a laptop CPU is enough).</p>
+      <p>Two kinds of box follow the running examples: amber <b style="color:var(--hot)">Our sentence</b> boxes for Paris, teal <b style="color:var(--accent)">Copying thread</b> boxes for Robby.</p>
       <p>Try to predict what will happen before you move a slider. Being wrong is where the learning happens.</p>
     </div>
     <div class="prose">
@@ -468,7 +484,13 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     </div>
   </div>
   <div class="col prose">
-    <p>Watch the right-hand number as you step. After "a little robot", 6 tokens cover 90% of the probability, because <span class="tok"><span class="sp">·</span>named</span> is a strong pattern. Right after "named", it takes <strong>865</strong> tokens to cover 90%: any name would do. Now watch the name "Robby" come back in step 11. The first time, "by" after "Rob" was one option among 87. The second time, <strong>a single token</strong> covers 90%: the model copies the name it already wrote. Lesson 07 finds the heads that do this copying. The model's uncertainty rises and falls with every word, and that's exactly where sampling settings matter.</p>
+    <p>Watch the right-hand number as you step. After "a little robot", 6 tokens cover 90% of the probability, because <span class="tok"><span class="sp">·</span>named</span> is a strong pattern. Right after "named", it takes <strong>865</strong> tokens to cover 90%: any name would do. The model's uncertainty rises and falls with every word, and that's exactly where sampling settings matter.</p>
+  </div>
+  <div class="col thread copy">
+    <p class="label">Copying thread</p>
+    <p>Keep stepping until the name "Robby" comes back (step 11). The first time, "by" after "Rob" was one option among 87. The second time, <strong>a single token</strong> covers 90%. Nothing about robots or cities makes "Robby" the right name. The model is certain because the name is already in the text, so it copies it. <b>Hold that thought.</b> Lesson 07 finds the heads that do this copying, and lesson 09 switches them off.</p>
+  </div>
+  <div class="col prose">
     <h3>Sampling: three knobs that edit the probabilities</h3>
     <p>Greedy decoding always takes the top bar. Sampling rolls a weighted die instead. Real systems first <em>edit</em> the probability list with three knobs:</p>
     <ul>
@@ -750,8 +772,9 @@ output  = weights · V                 what you collect from them</p>
     <h3>The attention sink</h3>
     <p>Select a random head and click a token. Very often most of the weight lands on the <strong>first token</strong>, "The". Averaged over all heads and layers, the first token gets <strong>56%</strong> of all attention. It's not that "The" is important. Softmax forces the weights to add up to 1, so a head with nothing useful to do needs somewhere harmless to put its attention, and the model learned to park it on the first token. Researchers call this the <em>attention sink</em>.</p>
 
-    <h3>Heads with jobs: a hunt</h3>
-    <p>Can we find heads with a clear, nameable job? Here's a classic experiment. Take 50 <strong>random</strong> tokens, gibberish, and repeat them twice. The model can't possibly predict the first copy. But if it has a copying mechanism, the second copy is easy: "last time I saw this token, that token came next".</p>
+    <h3>Heads with jobs: the copying heads</h3>
+    <p>Remember Robby from lesson 03? The second time the name came up, the model was certain of it, because it copied from earlier in the text. Now we can ask <em>which heads</em> do that copying.</p>
+    <p>To find them, we take meaning away so that copying is the only thing left that can work. Take 50 <strong>random</strong> tokens, gibberish, and repeat them twice. The model can't possibly predict the first copy, and no fact it has learned can help. But if it has a copying mechanism, the second copy is easy: "last time I saw this token, that token came next".</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Loss on 50 random tokens, repeated twice</h4><span class="hint">lower = better prediction</span></div>
@@ -779,12 +802,17 @@ output  = weights · V                 what you collect from them</p>
     <div id="w07-patterns" class="grid2"></div>
     <p class="caption">Rows are the token doing the looking, columns the token looked at. A <strong>previous-token head</strong> draws a line just below the diagonal. An <strong>induction head</strong> draws a line in the lower-left block, offset by one: in the second copy, each token looks at the position just after its earlier twin. The <strong>sink head</strong> puts everything on column 0.</p>
   </div>
+  <div class="col thread copy">
+    <p class="label">Copying thread</p>
+    <p>Back to the story: "…robot named Robby lived in a big city. Rob". At that second " Rob", head <b>L18 H6</b>, the strongest induction head, puts <b>97.5%</b> of its attention on the token that followed the first " Rob": <span class="tok">by</span>. It carries "by" forward, and the model gives "by" 99.9%. The random-token experiment and the story show the same mechanism.</p>
+  </div>
   <div class="col keys">
     <p class="label">Key ideas</p>
     <ul>
       <li>Attention = query·key scores → softmax → weighted average of values. Tokens only look backwards.</li>
       <li>270 heads specialise: previous-token heads, induction (copy) heads, lookup heads, idle "sink" heads.</li>
       <li>In our sentence, head L23 H4 carries "Eiffel" into the position that predicts "Paris".</li>
+      <li>Induction heads (layers 17–18) copy: at a repeated token they look at what followed it last time. That's how "Robby" came back.</li>
     </ul>
   </div>
   <p class="col next"><span class="muted">Next question:</span> <a href="#l08">every new token re-reads the whole past. Isn't that slow? →</a></p>
@@ -910,6 +938,10 @@ output  = weights · V                 what you collect from them</p>
     <div class="panel-title"><h4>Copying a made-up name</h4><span class="hint">greedy continuation as induction heads are switched off</span></div>
     <div id="w09-zorb"></div>
     <p class="caption">"Zorblat" is not a real name, so the model can't know it; the only way to produce it is to copy it from earlier in the prompt. With 3 heads off, the model reaches for "Quinta" (a piece of the bakery's name). With 10 off, it produces "Zaroff", a similar-sounding name: the memory of the name is blurring. With 30 off, it gives up and writes a common name.</p>
+  </div>
+  <div class="col thread copy">
+    <p class="label">Copying thread</p>
+    <p>This closes the thread. In lesson 03 the model repeated "Robby" with near certainty. In lesson 07 the induction heads in layers 17 and 18 were looking at exactly the right earlier token. Here, switching off the top 5 of them makes a repeat as hard to predict as gibberish (loss 0.66 → 10.5), while 5 random heads barely matter. "Zorblat" is the same test on real text: a name the model can only produce by copying, and it loses the name as the heads go.</p>
   </div>
   <div class="col keys">
     <p class="label">Key ideas</p>
