@@ -313,7 +313,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     </div>
     <div class="prose">
       <h3 style="margin:0">How much math?</h3>
-      <p>Five formulas in total, each introduced only when you need it: softmax, temperature, loss, attention, and three one-line helpers in the last lesson. If you can read <code>a / b</code> and know what an average is, you have enough.</p>
+      <p>A handful of short formulas, each introduced only when you need it. Part 1 has four: softmax, temperature, loss and attention, plus three one-line helpers when we rebuild the model in lesson 10. Part 2 adds simple arithmetic: memory sizes, rounding, and one matrix sum for LoRA. If you can read <code>a / b</code> and know what an average is, you have enough.</p>
     </div>
   </div>
 </header>
@@ -543,7 +543,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
   </div>
   <div class="col thread">
     <p class="label">Our sentence</p>
-    <p>Ten tokens: <span id="w04-run" class="tokrow" style="display:inline-flex"></span>. "Eiffel" is not in the vocabulary, so it arrives as <span class="tok"><span class="sp">·</span>E</span> + <span class="tok">iffel</span>. The model never sees the word "Eiffel". It sees two fragments and has to work out from context that together they mean the famous tower. Lesson 07 shows the head that does this.</p>
+    <p>Ten tokens: <span id="w04-run" class="tokrow" style="display:inline-flex"></span>. "Eiffel" is not in the vocabulary, so it arrives as <span class="tok"><span class="sp">·</span>E</span> + <span class="tok">iffel</span>. The model never sees the word "Eiffel". It sees two fragments and has to work out from context that together they mean the famous tower. Keep an eye on <span class="tok">iffel</span>: in lesson 07 we'll find the head that carries it forward to the word that has to answer.</p>
   </div>
   <div class="col prose">
     <h3>From ID to vector: the embedding table</h3>
@@ -825,12 +825,17 @@ output  = weights · V                 what you collect from them</p>
     </div>
     <div id="w08-calc"></div>
   </div>
+  <div class="col prose">
+    <h3>What's slow now: reading the weights</h3>
+    <p>With the cache in place, each decode step feeds in just one token. That's very little arithmetic, but the token still has to pass through every layer, so <em>every weight</em> is read from memory once per new token: about 270 MB for this model in 16-bit, gigabytes for bigger ones. Modern chips can do the arithmetic far faster than they can fetch the numbers, so the fetching sets the speed. Generation is <strong>memory-bound</strong>. Remember this; lesson 11 builds on it.</p>
+  </div>
   <div class="col keys">
     <p class="label">Key ideas</p>
     <ul>
       <li>Past tokens' keys and values never change, so they're cached and reused.</li>
       <li>Prefill processes the prompt in parallel; decode adds one token at a time.</li>
       <li>The cache trades memory for speed and grows with context × users. GQA shrinks it.</li>
+      <li>During decode, every new token reads every weight once. Speed is limited by memory, not by arithmetic.</li>
     </ul>
   </div>
   <p class="col next"><span class="muted">Next question:</span> <a href="#l09">we've seen which parts <em>look</em> important. Can we prove it? →</a></p>
@@ -868,7 +873,7 @@ output  = weights · V                 what you collect from them</p>
   </div>
   <div class="col thread">
     <p class="label">Our sentence</p>
-    <p>Switch the metric to <b>p(' Paris')</b>. With all layers in place the model gives ' Paris' 88%. Delete layer 23 and it falls to <b>3%</b>. Layers 23, 0, 1 and 11 are the only ones whose loss destroys the answer. Layer 23 is now confirmed four ways: the attention write (05), the lens (06), the lookup head (07), and this ablation.</p>
+    <p>Switch the metric to <b>p(' Paris')</b>. With all layers in place the model gives ' Paris' 88%. Delete layer 23 and it falls to <b>3%</b>. Layers 23, 0, 1 and 11 are the only ones whose loss destroys the answer. Layer 11 is a surprise, and we haven't explained it. It holds one of the strongest previous-token heads (lesson 07), which might be what lets the model treat <span class="tok"><span class="sp">·</span>E</span> + <span class="tok">iffel</span> as one word, but that's a guess. Testing it with the lesson script makes a good exercise. Layer 23 is now confirmed four ways: the attention write (05), the lens (06), the lookup head (07), and this ablation.</p>
   </div>
   <div class="col prose">
     <p>Two other patterns stand out. <strong>Layer 0 is a disaster to remove</strong> for everything: it converts raw token lookups into a form the rest of the network expects. And <strong>most middle layers can disappear</strong> with only mild damage to ordinary text. Because each layer only adds to the stream, the others can partly cover for a missing one.</p>
@@ -903,7 +908,7 @@ output  = weights · V                 what you collect from them</p>
       <li>This is the basic method of mechanistic interpretability, and it runs on a laptop.</li>
     </ul>
   </div>
-  <p class="col next"><span class="muted">Final question:</span> <a href="#l10">do we understand it well enough to write it ourselves? →</a></p>
+  <p class="col next"><span class="muted">Next question:</span> <a href="#l10">do we understand it well enough to write it ourselves? →</a></p>
 </section>
 
 <!-- ===================================================== 10 -->
