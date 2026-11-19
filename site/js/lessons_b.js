@@ -312,7 +312,7 @@
       ["Look up", "Each of our 10 token IDs picks one row of the embedding table E. The result is a 10 × 576 grid: one vector per token. This is the start of the residual stream.", "l04"],
       ["Normalise", "RMSNorm makes a rescaled copy of the stream for attention to read. The stream itself is untouched.", "l05"],
       ["Queries, keys, values", "Three matrix multiplications turn each token's vector into a query (9 heads × 64 numbers), a key and a value (3 heads × 64 each). Each key/value head is then shared by 3 query heads: grouped-query attention.", "l07"],
-      ["Add positions (RoPE)", "Queries and keys are rotated by an angle that depends on their position, so that attention scores can depend on distance. Values are not rotated. See the RoPE widget below.", "l10"],
+      ["Add positions (RoPE)", "Queries and keys are rotated by an angle that depends on their position, so that attention scores can depend on distance. Values are not rotated.", "l07-rope"],
       ["Attention", "Every query is compared with every key (dot product, divided by √64 to keep the numbers tame). Future positions are set to −∞ so softmax gives them zero weight. Each row of weights then averages the values. This is where head L23 H4 at \" of\" reads from \"iffel\".", "l07"],
       ["Write back", "The 9 heads' outputs are placed side by side (9 × 64 = 576) and mixed by Wo. The result is added to the stream, not substituted for it.", "l05"],
       ["MLP", "Another norm, then the SwiGLU MLP: expand to 1,536 twice, gate one copy with the other, shrink back to 576, and add to the stream. Then the loop goes round for the next layer, 30 times in all.", "l05"],
@@ -332,7 +332,7 @@
       $("w10-explain").replaceChildren(
         h("p", { class: "eyebrow", text: `step ${cur + 1} of ${steps.length}` }),
         h("h3", { text: title, style: "font-size:1.35rem" }), h("p", { text }),
-        h("p", {}, h("a", { href: "#" + lesson, text: lesson === "l10" ? "Try the RoPE widget below ↓" : `Back to lesson ${lesson.slice(1)} →` })));
+        h("p", {}, h("a", { href: "#" + lesson, text: `Back to lesson ${lesson.slice(1, 3)} →` })));
     };
     seg($("w10-steps"), steps.map((st, i) => ({ label: `${i + 1}. ${st[0]}`, value: i })), 0, (v) => { cur = +v; draw(); });
     draw();

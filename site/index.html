@@ -333,7 +333,7 @@ footer { padding-block: 4rem 2rem; border-top: 1px solid var(--line); margin-top
     </div>
     <div class="prose">
       <h3 style="margin:0">How much math?</h3>
-      <p>A handful of short formulas, each introduced only when you need it. Part 1 has four: softmax, temperature, loss and attention, plus three one-line helpers when we rebuild the model in lesson 10. Part 2 adds simple arithmetic: memory sizes, rounding, and one matrix sum for LoRA. If you can read <code>a / b</code> and know what an average is, you have enough.</p>
+      <p>A handful of short formulas, each introduced only when you need it. Part 1 has four: softmax, temperature, loss and attention, plus three one-line helpers (RMSNorm and SwiGLU in lesson 05, RoPE in lesson 07). Part 2 adds simple arithmetic: memory sizes, rounding, and one matrix sum for LoRA. If you can read <code>a / b</code> and know what an average is, you have enough.</p>
     </div>
   </div>
 </header>
@@ -638,6 +638,10 @@ x = x + mlp(norm(x))</p>
       <li><strong>Attention</strong> is the only place where tokens exchange information. The vector for " of" can pull in information from the vector for "iffel". Lesson 07 is about this.</li>
       <li><strong>The MLP</strong> (multi-layer perceptron, also called the feed-forward layer) works on each token on its own. It's the biggest part of the model, and research suggests much of the model's stored knowledge lives here.</li>
     </ul>
+    <p id="l05-norm"><strong>What's <code>norm</code>?</strong> Before each editor reads the stream, it takes a rescaled copy. This model uses <strong>RMSNorm</strong>: divide the vector by its typical size (the root of the mean of the squares), so its numbers sit around 1, then multiply each of the 576 dimensions by a learned weight. The stream keeps growing as updates pile up, and the norm means attention and the MLP always see numbers in a familiar range. It's one line:</p>
+    <p class="formula">norm(x) = x / sqrt(mean(x²) + ε) * w      ε is a tiny number to avoid dividing by 0</p>
+    <p id="l05-mlp"><strong>What's inside the MLP?</strong> This model's MLP has a shape called <strong>SwiGLU</strong>. It makes two expanded copies of the token's vector, 576 → 1,536 numbers each. One copy goes through <code>silu</code>, a smooth "let positive values through, squash negatives toward 0", and is multiplied into the other, so it acts as a gate that decides how much of each of the 1,536 numbers passes. A third matrix shrinks the result back to 576. That's three matrices of 576 × 1,536 per layer, which is why the MLP holds most of the parameters.</p>
+    <p class="formula">mlp(h) = (silu(h · Wgate) * (h · Wup)) · Wdown</p>
     <p>Because everything is added to one stream, the stream at layer 15 is the same kind of object as the final output: something you could turn into token scores. That fact is what makes lesson 06 possible.</p>
   </div>
   <div class="bench panel">
@@ -655,16 +659,13 @@ x = x + mlp(norm(x))</p>
     <p class="label">Our sentence</p>
     <p>Look at the spike: the <b>attention</b> sublayers of layers 23 and 24 write updates about 190 units long, about twice as big as the attention update in any other layer. Something important happens there for the token " of". Keep layers 23 and 24 in mind; they come back in the next three lessons.</p>
   </div>
-  <div class="col prose">
-    <h3>A detail worth noticing: grouped-query attention</h3>
-    <p>In the layer's weight shapes, <code>q_proj</code> is 576 → 576, but <code>k_proj</code> and <code>v_proj</code> are 576 → 192. The model has 9 attention heads asking questions (queries) but only 3 sets of keys and values, each shared by 3 heads. This is <strong>grouped-query attention</strong>, used by nearly every modern model. It saves memory in the KV cache (lesson 08) at almost no cost in quality.</p>
-  </div>
   <div class="col keys">
     <p class="label">Key ideas</p>
     <ul>
       <li>A transformer is a lookup table, 30 identical "read, compute, add back" blocks, and a scoring layer.</li>
       <li>The residual stream is the running vector per token. Layers add to it and never overwrite it.</li>
       <li>Attention moves information between tokens. The MLP processes each token on its own.</li>
+      <li>Each sublayer reads a normalised copy of the stream (RMSNorm). The MLP expands, gates and shrinks (SwiGLU).</li>
     </ul>
   </div>
   <p class="col next"><span class="muted">Next question:</span> <a href="#l06">if the stream is always "readable", can we read it halfway up? →</a></p>
@@ -769,6 +770,24 @@ output  = weights · V                 what you collect from them</p>
     <p>Choose the preset <b>"Eiffel lookup: L23 H4"</b>. From the last token " of", this head puts <b>87%</b> of its attention on <span class="tok">iffel</span>. That's layer 23, the same layer where the big attention write happened (lesson 05) and where ' Paris' started climbing (lesson 06). Three separate measurements point to the same spot: this is where the subject of the sentence is copied into the position that has to answer.</p>
   </div>
   <div class="col prose">
+    <h3 id="l07-rope">Word order: how does attention know who came first?</h3>
+    <p>Look at the formula again. It compares queries and keys, and nothing in it says where a token sits. On its own, attention would see "dog bites man" and "man bites dog" as the same bag of tokens. Yet some heads clearly care about position: the previous-token heads later in this lesson always look exactly one step back.</p>
+    <p>The fix in this model is <strong>RoPE</strong> (rotary position embedding). Just before the comparison, each query and key is <em>rotated</em> by an angle proportional to its position. The 64 numbers of each head are treated as 32 pairs, and each pair is rotated at its own speed, some fast like a seconds hand, some slow like an hour hand. Values are not rotated.</p>
+    <p>The trick: when you compare a rotated query with a rotated key, only the <strong>difference</strong> of their angles matters. So the score depends on how far apart two tokens are, not on where they sit in the document. Try it:</p>
+  </div>
+  <div class="bench panel">
+    <div class="panel-title"><h4>RoPE: positions as rotations</h4><span class="hint">one 2-number pair of a query and a key</span></div>
+    <div class="controls">
+      <label for="w10-q">query position <input type="range" id="w10-q" min="0" max="40" value="9"><output id="w10-q-out"></output></label>
+      <label for="w10-k">key position <input type="range" id="w10-k" min="0" max="40" value="2"><output id="w10-k-out"></output></label>
+      <label for="w10-f">pair <input type="range" id="w10-f" min="0" max="31" value="2"><output id="w10-f-out"></output></label>
+    </div>
+    <div class="grid2" style="align-items:center">
+      <div id="w10-rope"></div>
+      <div class="prose" id="w10-rope-text"></div>
+    </div>
+  </div>
+  <div class="col prose">
     <h3>The attention sink</h3>
     <p>Select a random head and click a token. Very often most of the weight lands on the <strong>first token</strong>, "The". Averaged over all heads and layers, the first token gets <strong>56%</strong> of all attention. It's not that "The" is important. Softmax forces the weights to add up to 1, so a head with nothing useful to do needs somewhere harmless to put its attention, and the model learned to park it on the first token. Researchers call this the <em>attention sink</em>.</p>
 
@@ -810,6 +829,7 @@ output  = weights · V                 what you collect from them</p>
     <p class="label">Key ideas</p>
     <ul>
       <li>Attention = query·key scores → softmax → weighted average of values. Tokens only look backwards.</li>
+      <li>RoPE rotates queries and keys by position, so attention scores depend on how far apart tokens are.</li>
       <li>270 heads specialise: previous-token heads, induction (copy) heads, lookup heads, idle "sink" heads.</li>
       <li>In our sentence, head L23 H4 carries "Eiffel" into the position that predicts "Paris".</li>
       <li>Induction heads (layers 17–18) copy: at a repeated token they look at what followed it last time. That's how "Robby" came back.</li>
@@ -852,7 +872,8 @@ output  = weights · V                 what you collect from them</p>
     <h3>The price: memory</h3>
     <p>The cache must hold keys and values for every layer, every KV head, and every token so far:</p>
     <p class="formula">cache bytes = 2 (K and V) × layers × kv_heads × head_dim × tokens × bytes per number</p>
-    <p>The weights of a model have a fixed size. The cache grows with every token of context and with every user served in parallel. When you set a context size or a number of parallel slots in llama-server or Ollama, this is the number you're really choosing. Grouped-query attention (lesson 05) helps a lot here: sharing each key/value head between several query heads divides the cache by that factor.</p>
+    <p>The weights of a model have a fixed size. The cache grows with every token of context and with every user served in parallel. When you set a context size or a number of parallel slots in llama-server or Ollama, this is the number you're really choosing.</p>
+    <p>That's why this model, like nearly every modern one, uses <strong>grouped-query attention</strong> (GQA). It has 9 query heads (lesson 07) but only <strong>3</strong> key/value heads, each shared by 3 query heads. You can see it in the weight shapes: <code>q_proj</code> is 576 → 576, but <code>k_proj</code> and <code>v_proj</code> are 576 → 192 (3 × 64). The cache only stores keys and values, so it's 3 times smaller than with 9 full heads, at almost no cost in quality. That's the <code>kv_heads</code> in the formula.</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>KV cache calculator</h4><span class="hint">pick a model, then change the context</span></div>
@@ -972,23 +993,8 @@ output  = weights · V                 what you collect from them</p>
     <div class="panel" id="w10-explain" aria-live="polite"></div>
   </div>
   <div class="col prose">
-    <h3>The three small pieces you haven't met</h3>
-    <p><strong>RMSNorm</strong> rescales a vector so its typical size is 1, then multiplies each dimension by a learned weight. It keeps the numbers in a range the next layer expects. It's one line: <code>x / sqrt(mean(x²) + ε) * w</code>.</p>
-    <p><strong>SwiGLU</strong> is the MLP's shape: expand 576 → 1536 twice, let one copy act as a gate (<code>silu</code> is a smooth "let positive values through"), multiply, and shrink back to 576.</p>
-    <p><strong>RoPE</strong> (rotary position embedding) is how the model knows word order. Attention by itself has no idea which token came first; it just compares queries and keys. RoPE fixes that by <em>rotating</em> each query and key by an angle proportional to its position. The 64 numbers of each head are treated as 32 pairs, and each pair is rotated at its own speed, some fast like a seconds hand, some slow like an hour hand.</p>
-    <p>The trick: when you compare a rotated query with a rotated key, only the <strong>difference</strong> of their angles matters. So the score depends on how far apart two tokens are, not on where they sit in the document. Try it:</p>
-  </div>
-  <div class="bench panel">
-    <div class="panel-title"><h4>RoPE: positions as rotations</h4><span class="hint">one 2-number pair of a query and a key</span></div>
-    <div class="controls">
-      <label for="w10-q">query position <input type="range" id="w10-q" min="0" max="40" value="9"><output id="w10-q-out"></output></label>
-      <label for="w10-k">key position <input type="range" id="w10-k" min="0" max="40" value="2"><output id="w10-k-out"></output></label>
-      <label for="w10-f">pair <input type="range" id="w10-f" min="0" max="31" value="2"><output id="w10-f-out"></output></label>
-    </div>
-    <div class="grid2" style="align-items:center">
-      <div id="w10-rope"></div>
-      <div class="prose" id="w10-rope-text"></div>
-    </div>
+    <h3>Nothing new, just assembled</h3>
+    <p>Every line uses something you've already met: the embedding lookup (04), <code>rms_norm</code> and the SwiGLU MLP (05), queries, keys, values and <code>rope</code> (07), the shared key/value heads of grouped-query attention (08), and the final scores (02). The only new thing is seeing them in one place.</p>
   </div>
   <div class="bench panel">
     <div class="panel-title"><h4>Moment of truth</h4><span class="hint">output of lessons/10_rebuild_forward.py</span></div>
@@ -1112,7 +1118,7 @@ w'    = q × scale            ← used at inference</p>
   </div>
   <div class="col prose">
     <h3>A surprise in the attention weights</h3>
-    <p>Do the same comparison on <code>attn_q</code> and it fails badly, with a relative error over 100%. The numbers are right but the <strong>rows are in a different order</strong>. RoPE (lesson 10) rotates pairs of numbers. Hugging Face pairs element <code>i</code> with <code>i + 32</code>; llama.cpp pairs neighbours. Same math, so the converter shuffles the rows of <code>q_proj</code> and <code>k_proj</code> once. Undo the shuffle and the weights match.</p>
+    <p>Do the same comparison on <code>attn_q</code> and it fails badly, with a relative error over 100%. The numbers are right but the <strong>rows are in a different order</strong>. RoPE (lesson 07) rotates pairs of numbers. Hugging Face pairs element <code>i</code> with <code>i + 32</code>; llama.cpp pairs neighbours. Same math, so the converter shuffles the rows of <code>q_proj</code> and <code>k_proj</code> once. Undo the shuffle and the weights match.</p>
   </div>
   <div class="bench grid2" style="align-items:start">
     <div class="panel">
