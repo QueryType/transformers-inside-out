@@ -45,7 +45,7 @@
       bars($("w11-mem"), precs.map(([lab], i) => ({ labelNode: h("span", { text: lab }), value: vals[i], text: gb(vals[i]), cls: i === 3 ? "hot" : "" })), vals[0]);
       const fits = (g) => [16, 24, 32, 48, 64, 128, 192].find((r) => r >= g * 1.15);
       $("w11-mem-cap").textContent = `8-bit and 4-bit include the per-group scales (8.5 and 4.5 bits per weight). ${name}: ${gb(vals[1])} in bf16, ${gb(vals[3])} in 4-bit. ` +
-        (fits(vals[3]) ? `The 4-bit version fits on a ${fits(vals[3])} GB machine (with room for the KV cache from lesson 08)` : "Still too big for most single machines") +
+        (fits(vals[3]) ? `The 4-bit version fits on a ${fits(vals[3])} GB machine (with room for the KV cache from lesson 10)` : "Still too big for most single machines") +
         (fits(vals[1]) ? `; bf16 needs ${fits(vals[1])} GB.` : "; bf16 needs more memory than any laptop has.");
     };
     seg($("w11-models"), models.map((m, i) => ({ label: m[0], value: i })), mi, (v) => { mi = +v; mem(); });
